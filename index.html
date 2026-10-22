@@ -157,6 +157,28 @@
   .item.feito { cursor: default; background: #e7f6dc; border-color: var(--verde-escuro); box-shadow: 0 3px 0 #2c5e1c; }
   .item.feito .preco { background: var(--verde); border-color: var(--verde-escuro); color: #fff; }
   .item.misterio .ico { filter: brightness(0); opacity: .35; }
+  .vazio { text-align: center; padding: 10px; font-weight: bold; opacity: .8; }
+  .concluidos { border: 3px dashed var(--madeira); border-radius: 10px; background: var(--papel-escuro); }
+  .concluidos summary {
+    cursor: pointer; padding: 8px 12px; font-weight: bold; list-style: none; user-select: none;
+  }
+  .concluidos summary::-webkit-details-marker { display: none; }
+  .concluidos summary::before { content: '▶ '; font-size: 11px; }
+  .concluidos[open] summary::before { content: '▼ '; }
+  .lista-concluidos { display: flex; flex-direction: column; gap: 6px; padding: 0 8px 8px; }
+  .lista-concluidos .item { padding: 4px 8px; box-shadow: none; }
+  .lista-concluidos .item .ico { font-size: 20px; width: 28px; }
+  .lista-concluidos .item .desc, .lista-concluidos .item .efeito { display: none; }
+
+  /* Contadores de animais sobre a fazenda */
+  .rotulos { position: absolute; inset: 8px; pointer-events: none; }
+  .grupo-rotulos { position: absolute; transform: translate(-50%, -50%); display: flex; gap: 3px; }
+  .rotulo-animal {
+    background: rgba(255, 248, 231, .92); color: var(--texto);
+    border: 2px solid var(--madeira-escura); border-radius: 8px;
+    padding: 0 5px; font-size: clamp(10px, 1.3vw, 14px); font-weight: bold; white-space: nowrap;
+    box-shadow: 0 2px 0 var(--madeira-escura);
+  }
 
   /* ---------- Avisos e modal ---------- */
   #avisos {
@@ -214,6 +236,7 @@
   <section class="fazenda-col painel">
     <div class="fazenda-wrap" id="fazendaWrap">
       <canvas id="fazenda" width="400" height="260"></canvas>
+      <div class="rotulos" id="rotulos"></div>
     </div>
     <div class="dica" id="dica">👆 Clique na fazenda para ganhar moedas e começar a reconstrução!</div>
     <div class="progresso">
@@ -436,8 +459,11 @@ function moedasPorClique() {
 // FORMATAÇÃO DE NÚMEROS
 // =====================================================================
 function fmt(n) {
+  if (!isFinite(n)) return '∞';
   if (n < 1e6) return Math.floor(n).toLocaleString('pt-BR');
-  const unidades = [[1e15, 'quatri'], [1e12, 'tri'], [1e9, 'bi'], [1e6, 'mi']];
+  if (n >= 1e36) return n.toExponential(2).replace('.', ',').replace('e+', 'e');
+  const unidades = [[1e33, 'dec'], [1e30, 'non'], [1e27, 'oct'], [1e24, 'sept'], [1e21, 'sext'], [1e18, 'quint'],
+    [1e15, 'quatri'], [1e12, 'tri'], [1e9, 'bi'], [1e6, 'mi']];
   for (const [v, s] of unidades) {
     if (n >= v) return (n / v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + s;
   }
@@ -1778,40 +1804,67 @@ function textoEfeito(item) {
   if (item.porSeg) partes.push(item.unico ? `+${fmt(item.porSeg)}/s` : `+${fmt(item.porSeg)}/s cada`);
   return partes.join(' · ');
 }
+// Ordem da lista: disponíveis no topo, depois bloqueados, depois mistérios;
+// itens únicos já comprados vão para a seção recolhida "Concluídos".
+let concluidosAberto = false;
+function cartaoItem(item) {
+  const b = document.createElement('button');
+  b.className = 'item';
+  b.dataset.id = item.id;
+  const feito = item.unico && tem(item.id);
+  const lib = liberado(item);
+  if (!lib && !visivel(item)) {
+    b.classList.add('bloqueado', 'misterio');
+    b.innerHTML = `<div class="ico">${item.ico}</div>
+      <div class="info"><div class="nome">???</div><div class="desc">Continue reconstruindo a fazenda para descobrir.</div></div>
+      <div class="preco">🔒</div>`;
+  } else if (!lib) {
+    b.classList.add('bloqueado');
+    b.innerHTML = `<div class="ico">${item.ico}</div>
+      <div class="info"><div class="nome">${item.nome}</div><div class="desc">🔒 Requer: ${textoReq(item)}</div>
+      <div class="efeito">${textoEfeito(item)}</div></div>
+      <div class="preco">🔒</div>`;
+  } else {
+    if (feito) b.classList.add('feito');
+    const q = !item.unico && qtd(item.id) ? `<span class="qtd">×${fmt(qtd(item.id))}</span>` : '';
+    b.innerHTML = `<div class="ico">${item.ico}</div>
+      <div class="info"><div class="nome">${item.nome}${q}</div><div class="desc">${item.desc}</div>
+      <div class="efeito">${textoEfeito(item)}</div></div>
+      <div class="preco">${feito ? '✔ Feito' : '🪙 ' + fmt(custoDe(item))}</div>`;
+    if (!feito) b.addEventListener('click', () => comprar(item));
+  }
+  return b;
+}
 function montarLoja() {
   elItens.innerHTML = '';
-  for (const item of ITENS.filter(i => i.cat === abaAtual)) {
-    const b = document.createElement('button');
-    b.className = 'item';
-    b.dataset.id = item.id;
-    const feito = item.unico && tem(item.id);
-    const lib = liberado(item);
-    if (!lib && !visivel(item)) {
-      b.classList.add('bloqueado', 'misterio');
-      b.innerHTML = `<div class="ico">${item.ico}</div>
-        <div class="info"><div class="nome">???</div><div class="desc">Continue reconstruindo a fazenda para descobrir.</div></div>
-        <div class="preco">🔒</div>`;
-    } else if (!lib) {
-      b.classList.add('bloqueado');
-      b.innerHTML = `<div class="ico">${item.ico}</div>
-        <div class="info"><div class="nome">${item.nome}</div><div class="desc">🔒 Requer: ${textoReq(item)}</div>
-        <div class="efeito">${textoEfeito(item)}</div></div>
-        <div class="preco">🔒</div>`;
-    } else {
-      if (feito) b.classList.add('feito');
-      const q = !item.unico && qtd(item.id) ? `<span class="qtd">×${qtd(item.id)}</span>` : '';
-      b.innerHTML = `<div class="ico">${item.ico}</div>
-        <div class="info"><div class="nome">${item.nome}${q}</div><div class="desc">${item.desc}</div>
-        <div class="efeito">${textoEfeito(item)}</div></div>
-        <div class="preco">${feito ? '✔ Feito' : '🪙 ' + fmt(custoDe(item))}</div>`;
-      if (!feito) b.addEventListener('click', () => comprar(item));
-    }
-    elItens.appendChild(b);
+  const itens = ITENS.filter(i => i.cat === abaAtual);
+  const concluidos = itens.filter(i => i.unico && tem(i.id));
+  const pendentes = itens.filter(i => !concluidos.includes(i));
+  const grupo = i => liberado(i) ? 0 : visivel(i) ? 1 : 2;
+  pendentes.sort((a, b) => grupo(a) - grupo(b)); // sort estável: mantém a ordem original dentro do grupo
+  for (const item of pendentes) elItens.appendChild(cartaoItem(item));
+  if (!pendentes.length) {
+    const vazio = document.createElement('div');
+    vazio.className = 'vazio';
+    vazio.textContent = '🎉 Tudo desta categoria já foi feito!';
+    elItens.appendChild(vazio);
+  }
+  if (concluidos.length) {
+    const d = document.createElement('details');
+    d.className = 'concluidos';
+    d.open = concluidosAberto;
+    d.addEventListener('toggle', () => { concluidosAberto = d.open; });
+    d.innerHTML = `<summary>✔ Concluídos (${concluidos.length})</summary>`;
+    const lista = document.createElement('div');
+    lista.className = 'lista-concluidos';
+    for (const item of concluidos) lista.appendChild(cartaoItem(item));
+    d.appendChild(lista);
+    elItens.appendChild(d);
   }
   atualizarLoja();
 }
 function atualizarLoja() {
-  for (const b of elItens.children) {
+  for (const b of elItens.querySelectorAll('.item')) {
     const item = ITEM[b.dataset.id];
     if (b.classList.contains('bloqueado') || b.classList.contains('feito')) continue;
     b.classList.toggle('caro', estado.moedas < custoDe(item));
@@ -1819,6 +1872,32 @@ function atualizarLoja() {
   for (const aba of elAbas.children) {
     const temCompra = ITENS.some(i => i.cat === aba.dataset.cat && liberado(i) && !(i.unico && tem(i.id)) && estado.moedas >= custoDe(i));
     aba.querySelector('.ponto').classList.toggle('on', temCompra);
+  }
+}
+// Contadores com o total de cada animal (na tela aparecem no máximo LIMITES[tipo])
+const GRUPOS_ROTULO = [
+  { x: 258, y: 121, tipos: ['galinha'] },                // na frente do galinheiro
+  { x: 50, y: 160, tipos: ['pato'] },                    // na margem do lago
+  { x: 340, y: 81, tipos: ['porco', 'ovelha', 'vaca'] }, // no alto do pasto
+];
+function atualizarRotulos() {
+  const el = $('rotulos');
+  el.innerHTML = '';
+  for (const g of GRUPOS_ROTULO) {
+    const tipos = g.tipos.filter(tem);
+    if (!tipos.length) continue;
+    const grupo = document.createElement('div');
+    grupo.className = 'grupo-rotulos';
+    grupo.style.left = (g.x / W * 100) + '%';
+    grupo.style.top = (g.y / H * 100) + '%';
+    for (const tipo of tipos) {
+      const r = document.createElement('div');
+      r.className = 'rotulo-animal';
+      r.textContent = `${ITEM[tipo].ico} ×${fmt(qtd(tipo))}`;
+      r.title = `${ITEM[tipo].nome}: ${fmt(qtd(tipo))}`;
+      grupo.appendChild(r);
+    }
+    el.appendChild(grupo);
   }
 }
 function atualizarHUD() {
@@ -1844,6 +1923,7 @@ function comprar(item) {
   redesenharCaches();
   efeitoCompra(item);
   sincronizarAnimais();
+  atualizarRotulos();
   if (item.grande) Som.fanfarra();
   else if (item.cat === 'limpeza') Som.limpeza();
   else Som.compra();
@@ -1920,7 +2000,7 @@ $('btnConfirmar').addEventListener('click', () => {
   $('modal').classList.remove('aberto');
   $('dica').textContent = '👆 Clique na fazenda para ganhar moedas e começar a reconstrução!';
   redesenharCaches();
-  montarAbas(); montarLoja(); atualizarHUD(); atualizarProgresso(); salvar();
+  montarAbas(); montarLoja(); atualizarHUD(); atualizarProgresso(); atualizarRotulos(); salvar();
   aviso('A fazenda voltou ao começo. Boa sorte! 🌱');
 });
 
@@ -1940,6 +2020,7 @@ carregar();
 if (estado.cliques >= 10) $('dica').textContent = '🛒 Use as moedas na loja para limpar e reconstruir a fazenda!';
 redesenharCaches();
 sincronizarAnimais();
+atualizarRotulos();
 montarAbas();
 montarLoja();
 atualizarHUD();
