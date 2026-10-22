@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fazendinha Renascida</title>
+<style>
+  :root {
+    --madeira: #8b5a2b;
+    --madeira-escura: #5e3b1a;
+    --papel: #fff8e7;
+    --papel-escuro: #f3e6c4;
+    --texto: #4a3020;
+    --verde: #5cae3e;
+    --verde-escuro: #3d7f28;
+    --ouro: #f5c542;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(#a8dcff 0%, #d6f0ff 45%, #e6f5cf 100%);
+    font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+    color: var(--texto);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---------- Barra do topo ---------- */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 10px 16px;
+    background: var(--madeira);
+    border-bottom: 4px solid var(--madeira-escura);
+    color: #fff8e7;
+    box-shadow: 0 3px 0 rgba(0,0,0,.15);
+  }
+  header h1 {
+    margin: 0; font-size: 20px; letter-spacing: .5px;
+    text-shadow: 2px 2px 0 var(--madeira-escura);
+    white-space: nowrap;
+  }
+  .stats { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; justify-content: center; }
+  .stat {
+    background: var(--papel); color: var(--texto);
+    border: 3px solid var(--madeira-escura); border-radius: 10px;
+    padding: 4px 10px; font-weight: bold; white-space: nowrap;
+    box-shadow: 0 3px 0 var(--madeira-escura);
+  }
+  .stat.moedas { background: #fff1b8; font-size: 20px; min-width: 150px; text-align: center; }
+  .stat small { font-weight: normal; opacity: .8; }
+  .btn {
+    font: inherit; font-weight: bold; cursor: pointer;
+    border: 3px solid var(--madeira-escura); border-radius: 10px;
+    padding: 6px 12px; background: var(--papel); color: var(--texto);
+    box-shadow: 0 3px 0 var(--madeira-escura);
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--madeira-escura); }
+  .btn.perigo { background: #ffd6cf; }
+
+  /* ---------- Layout principal ---------- */
+  main {
+    display: flex; gap: 16px; align-items: flex-start;
+    max-width: 1280px; margin: 0 auto; padding: 16px;
+  }
+  .painel {
+    background: var(--papel);
+    border: 4px solid var(--madeira); border-radius: 14px;
+    box-shadow: 0 5px 0 var(--madeira-escura);
+  }
+  .fazenda-col { flex: 1.5; min-width: 0; }
+  .loja-col { flex: 1; min-width: 300px; max-width: 460px; }
+
+  .fazenda-wrap {
+    position: relative; padding: 8px; overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+  }
+  canvas#fazenda {
+    display: block; width: 100%; height: auto;
+    aspect-ratio: 256 / 160;
+    image-rendering: pixelated; image-rendering: crisp-edges;
+    border-radius: 8px; cursor: pointer;
+    touch-action: manipulation;
+  }
+  .dica {
+    text-align: center; padding: 6px 10px 10px; font-size: 14px;
+  }
+  .progresso { padding: 0 12px 12px; }
+  .barra {
+    height: 14px; background: var(--papel-escuro);
+    border: 2px solid var(--madeira-escura); border-radius: 8px; overflow: hidden;
+  }
+  .barra > div {
+    height: 100%; width: 0%;
+    background: repeating-linear-gradient(45deg, var(--verde) 0 8px, #6cc24a 8px 16px);
+    transition: width .4s;
+  }
+  .progresso .rotulo { font-size: 13px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+
+  /* Texto flutuante de "+1" */
+  .flutua {
+    position: absolute; pointer-events: none;
+    font-weight: bold; font-size: 20px; color: #ffe066;
+    text-shadow: 2px 2px 0 #7a4a12, -1px -1px 0 #7a4a12, 1px -1px 0 #7a4a12, -1px 1px 0 #7a4a12;
+    transform: translate(-50%, -50%);
+    animation: sobe .9s ease-out forwards;
+    white-space: nowrap; z-index: 5;
+  }
+  @keyframes sobe {
+    0%   { opacity: 1; transform: translate(-50%, -50%) scale(.7); }
+    20%  { transform: translate(-50%, -80%) scale(1.15); }
+    100% { opacity: 0; transform: translate(-50%, -260%) scale(1); }
+  }
+
+  /* ---------- Loja ---------- */
+  .loja-titulo { margin: 0; padding: 10px 14px 4px; font-size: 20px; }
+  .abas { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 10px; }
+  .aba {
+    position: relative; flex: 1 1 auto;
+    font: inherit; font-size: 13px; font-weight: bold; cursor: pointer;
+    padding: 6px 8px; border-radius: 8px;
+    border: 2px solid var(--madeira); background: var(--papel-escuro); color: var(--texto);
+  }
+  .aba.ativa { background: var(--madeira); color: #fff8e7; }
+  .aba .ponto {
+    position: absolute; top: -5px; right: -5px; width: 12px; height: 12px;
+    border-radius: 50%; background: #ff5a4f; border: 2px solid #fff8e7; display: none;
+  }
+  .aba .ponto.on { display: block; }
+
+  .itens { padding: 6px 10px 12px; display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 210px); overflow-y: auto; }
+  .item {
+    display: flex; align-items: center; gap: 10px; text-align: left;
+    width: 100%; font: inherit; color: inherit; cursor: pointer;
+    background: #fffdf5; border: 3px solid var(--madeira); border-radius: 10px;
+    padding: 8px 10px; box-shadow: 0 3px 0 var(--madeira-escura);
+    transition: transform .08s, background .15s;
+  }
+  .item:hover:not(.bloqueado):not(.feito):not(.caro) { background: #f2ffe6; transform: translateY(-1px); }
+  .item:active:not(.bloqueado):not(.feito):not(.caro) { transform: translateY(2px); box-shadow: 0 1px 0 var(--madeira-escura); }
+  .item .ico { font-size: 30px; width: 40px; text-align: center; flex-shrink: 0; }
+  .item .info { flex: 1; min-width: 0; }
+  .item .nome { font-weight: bold; font-size: 15px; }
+  .item .qtd {
+    display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 6px;
+    background: var(--verde); color: #fff; font-size: 12px; vertical-align: middle;
+  }
+  .item .desc { font-size: 12px; opacity: .85; margin-top: 2px; }
+  .item .efeito { font-size: 12px; color: var(--verde-escuro); font-weight: bold; margin-top: 2px; }
+  .item .preco {
+    font-weight: bold; white-space: nowrap; font-size: 14px;
+    background: #fff1b8; border: 2px solid #c99a2e; border-radius: 8px; padding: 2px 6px;
+  }
+  .item.caro { cursor: not-allowed; }
+  .item.caro .preco { background: #f3e2df; border-color: #c98a80; color: #a0453a; }
+  .item.bloqueado { cursor: not-allowed; background: #ece3cf; filter: grayscale(.7); opacity: .8; }
+  .item.bloqueado .preco { background: #ddd; border-color: #999; }
+  .item.feito { cursor: default; background: #e7f6dc; border-color: var(--verde-escuro); box-shadow: 0 3px 0 #2c5e1c; }
+  .item.feito .preco { background: var(--verde); border-color: var(--verde-escuro); color: #fff; }
+  .item.misterio .ico { filter: brightness(0); opacity: .35; }
+
+  /* ---------- Avisos e modal ---------- */
+  #avisos {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 6px; align-items: center; z-index: 50;
+    pointer-events: none; width: min(92vw, 520px);
+  }
+  .aviso {
+    background: var(--papel); border: 3px solid var(--madeira); border-radius: 10px;
+    padding: 8px 14px; font-weight: bold; text-align: center;
+    box-shadow: 0 3px 0 var(--madeira-escura);
+    animation: aparece .3s ease-out, some .5s ease-in 3.2s forwards;
+  }
+  @keyframes aparece { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes some { to { opacity: 0; transform: translateY(8px); } }
+
+  #modal {
+    position: fixed; inset: 0; background: rgba(40, 25, 10, .55);
+    display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px;
+  }
+  #modal.aberto { display: flex; }
+  #modal .caixa { max-width: 380px; padding: 20px; text-align: center; }
+  #modal h2 { margin: 0 0 8px; }
+  #modal .botoes { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+
+  @media (max-width: 860px) {
+    main { flex-direction: column; padding: 10px; }
+    .loja-col { max-width: none; width: 100%; min-width: 0; }
+    .itens { max-height: none; }
+    header h1 { font-size: 17px; }
+    .stat.moedas { font-size: 17px; min-width: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌻 Fazendinha Renascida</h1>
+  <div class="stats">
+    <div class="stat moedas">🪙 <span id="moedas">0</span></div>
+    <div class="stat">👆 <span id="porClique">1</span> <small>por clique</small></div>
+    <div class="stat">⏱️ <span id="porSegundo">0</span> <small>por segundo</small></div>
+  </div>
+  <button class="btn perigo" id="btnReiniciar">🔄 Reiniciar</button>
+</header>
+
+<main>
+  <section class="fazenda-col painel">
+    <div class="fazenda-wrap" id="fazendaWrap">
+      <canvas id="fazenda" width="256" height="160"></canvas>
+    </div>
+    <div class="dica" id="dica">👆 Clique na fazenda para ganhar moedas e começar a reconstrução!</div>
+    <div class="progresso">
+      <div class="rotulo"><span>🏡 Reconstrução da fazenda</span><span id="progTxt">0%</span></div>
+      <div class="barra"><div id="progBarra"></div></div>
+    </div>
+  </section>
+
+  <section class="loja-col painel">
+    <h2 class="loja-titulo">🛒 Loja</h2>
+    <div class="abas" id="abas"></div>
+    <div class="itens" id="itens"></div>
+  </section>
+</main>
+
+<div id="avisos"></div>
+
+<div id="modal">
+  <div class="caixa painel">
+    <h2>🔄 Reiniciar o jogo?</h2>
+    <p>Todo o progresso será perdido e a fazenda voltará a ficar abandonada. Tem certeza?</p>
+    <div class="botoes">
+      <button class="btn" id="btnCancelar">Cancelar</button>
+      <button class="btn perigo" id="btnConfirmar">Sim, recomeçar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// =====================================================================
+// DADOS DOS ITENS DA LOJA
+// =====================================================================
+// req: lista de [idDoItem, quantidadeMínima] necessários para liberar.
+const CATEGORIAS = [
+  { id: 'limpeza',     nome: '🧹 Limpeza' },
+  { id: 'ferramentas', nome: '🧰 Ferramentas' },
+  { id: 'plantacoes',  nome: '🌱 Plantações' },
+  { id: 'animais',     nome: '🐾 Animais' },
+  { id: 'construcoes', nome: '🔨 Construções' },
+];
+
+const ITENS = [
+  // ---- Limpeza (compra única) ----
+  { id: 'mato', cat: 'limpeza', nome: 'Arrancar o mato', ico: '🌿', custo: 15, unico: true,
+    desc: 'Tira as ervas daninhas que tomaram conta do terreno.',
+    msg: 'Mato arrancado! Já dá pra ver o chão.' },
+  { id: 'pedras', cat: 'limpeza', nome: 'Tirar as pedras', ico: '🪨', custo: 60, unico: true, req: [['mato', 1]],
+    desc: 'Remove as pedras espalhadas. Agora dá para plantar!',
+    msg: 'Pedras removidas! O terreno está pronto para canteiros.' },
+  { id: 'lixo', cat: 'limpeza', nome: 'Recolher lixo e galhos', ico: '🗑️', custo: 180, unico: true, req: [['pedras', 1]],
+    desc: 'Junta latas, papéis, garrafas e galhos secos.',
+    msg: 'Lixo recolhido! A fazenda está bem mais bonita.' },
+  { id: 'cerca', cat: 'limpeza', nome: 'Consertar a cerca', ico: '🪵', custo: 450, unico: true, req: [['lixo', 1]],
+    desc: 'Arruma a cerca quebrada e monta um cercadinho para animais.',
+    msg: 'Cerca consertada! Os animais já podem chegar.' },
+
+  // ---- Ferramentas (melhoram o clique) ----
+  { id: 'luvas', cat: 'ferramentas', nome: 'Luvas de trabalho', ico: '🧤', custo: 25, unico: true, clique: 1,
+    desc: 'Protegem as mãos para trabalhar mais rápido.', msg: 'Luvas novinhas!' },
+  { id: 'enxada', cat: 'ferramentas', nome: 'Enxada melhor', ico: '⛏️', custo: 200, unico: true, clique: 3, req: [['mato', 1]],
+    desc: 'Uma enxada afiada rende muito mais trabalho.', msg: 'Enxada nova em folha!' },
+  { id: 'regador', cat: 'ferramentas', nome: 'Regador grande', ico: '💧', custo: 1500, unico: true, clique: 8, req: [['poco', 1]],
+    desc: 'Com água do poço, cada clique vale mais.', msg: 'Regador cheinho de água!' },
+  { id: 'carrinho', cat: 'ferramentas', nome: 'Carrinho de mão', ico: '🛒', custo: 6000, unico: true, clique: 25, req: [['celeiro', 1]],
+    desc: 'Carrega tudo de uma vez só.', msg: 'Carrinho de mão pronto para o trabalho!' },
+
+  // ---- Plantações (repetíveis) ----
+  { id: 'cenoura', cat: 'plantacoes', nome: 'Canteiro de cenoura', ico: '🥕', custo: 25, porSeg: 1, req: [['pedras', 1]],
+    desc: 'Cenourinhas crocantes que crescem rapidinho.', msg: 'Um canteiro de cenoura foi plantado!' },
+  { id: 'milho', cat: 'plantacoes', nome: 'Milharal', ico: '🌽', custo: 140, porSeg: 5, req: [['lixo', 1], ['cenoura', 1]],
+    desc: 'Fileiras de milho bem amarelinho.', msg: 'Pés de milho plantados!' },
+  { id: 'pomar', cat: 'plantacoes', nome: 'Árvore do pomar', ico: '🍎', custo: 1100, porSeg: 20, req: [['cerca', 1], ['milho', 1]],
+    desc: 'Árvores carregadas de maçãs vermelhas.', msg: 'Uma macieira nova no pomar!' },
+
+  // ---- Animais (repetíveis) ----
+  { id: 'galinha', cat: 'animais', nome: 'Galinha', ico: '🐔', custo: 350, porSeg: 8, req: [['cerca', 1]],
+    desc: 'Bota ovos fresquinhos todos os dias.', msg: 'Có-có-có! Chegou uma galinha!' },
+  { id: 'ovelha', cat: 'animais', nome: 'Ovelha', ico: '🐑', custo: 2200, porSeg: 35, req: [['cerca', 1], ['galinha', 1]],
+    desc: 'Lã macia que vale um bom dinheiro.', msg: 'Méééé! Uma ovelha chegou!' },
+  { id: 'vaca', cat: 'animais', nome: 'Vaca', ico: '🐄', custo: 9000, porSeg: 110, req: [['celeiro', 1]],
+    desc: 'Leite fresquinho direto do celeiro.', msg: 'Muuuu! Uma vaca chegou!' },
+
+  // ---- Construções (compra única) ----
+  { id: 'poco', cat: 'construcoes', nome: 'Poço', ico: '🪣', custo: 700, unico: true, porSeg: 5, req: [['pedras', 1]],
+    desc: 'Água fresca: dobra a produção das plantações.', msg: 'Poço construído! As plantas agradecem.' },
+  { id: 'celeiro', cat: 'construcoes', nome: 'Celeiro', ico: '🛖', custo: 6000, unico: true, porSeg: 40, req: [['cerca', 1], ['galinha', 1]],
+    desc: 'Abriga os animais (+50% na produção deles) e libera vacas.', msg: 'Celeiro vermelhinho erguido!' },
+  { id: 'casa', cat: 'construcoes', nome: 'Reformar a casa', ico: '🏡', custo: 30000, unico: true, porSeg: 200, req: [['celeiro', 1]],
+    desc: 'A casinha velha volta a brilhar. Dobra as moedas por clique!', msg: 'Casa reformada! Lar, doce lar.' },
+];
+const ITEM = Object.fromEntries(ITENS.map(i => [i.id, i]));
+const CRESCIMENTO = 1.15; // cada compra de item repetível fica 15% mais cara
+
+// =====================================================================
+// ESTADO E SALVAMENTO
+// =====================================================================
+const CHAVE_SAVE = 'fazendinha-renascida-v1';
+const novoEstado = () => ({ moedas: 0, itens: {}, cliques: 0, salvoEm: Date.now() });
+let estado = novoEstado();
+
+function carregar() {
+  try {
+    const bruto = localStorage.getItem(CHAVE_SAVE);
+    if (!bruto) return;
+    const dados = JSON.parse(bruto);
+    estado = Object.assign(novoEstado(), dados);
+    estado.itens = estado.itens || {};
+  } catch (e) { estado = novoEstado(); }
+}
+function salvar() {
+  estado.salvoEm = Date.now();
+  try { localStorage.setItem(CHAVE_SAVE, JSON.stringify(estado)); } catch (e) {}
+}
+
+const qtd = id => estado.itens[id] || 0;
+const tem = id => qtd(id) > 0;
+
+function custoDe(item) {
+  return item.unico ? item.custo : Math.floor(item.custo * Math.pow(CRESCIMENTO, qtd(item.id)));
+}
+function liberado(item) {
+  return !item.req || item.req.every(([id, n]) => qtd(id) >= n);
+}
+// Mostra o nome do item só quando os requisitos dele já estão "à vista"
+function visivel(item) {
+  return !item.req || item.req.every(([id]) => liberado(ITEM[id]));
+}
+
+function multPlantas() { return tem('poco') ? 2 : 1; }
+function multAnimais() { return tem('celeiro') ? 1.5 : 1; }
+
+function moedasPorClique() {
+  let base = 1;
+  for (const it of ITENS) if (it.clique) base += it.clique * qtd(it.id);
+  if (tem('casa')) base *= 2;
+  return base;
+}
+function moedasPorSegundo() {
+  let total = 0;
+  for (const it of ITENS) {
+    if (!it.porSeg) continue;
+    let v = it.porSeg * qtd(it.id);
+    if (it.cat === 'plantacoes') v *= multPlantas();
+    if (it.cat === 'animais') v *= multAnimais();
+    total += v;
+  }
+  return total;
+}
+
+// =====================================================================
+// FORMATAÇÃO DE NÚMEROS
+// =====================================================================
+function fmt(n) {
+  if (n < 1e6) return Math.floor(n).toLocaleString('pt-BR');
+  const unidades = [[1e15, 'quatri'], [1e12, 'tri'], [1e9, 'bi'], [1e6, 'mi']];
+  for (const [v, s] of unidades) {
+    if (n >= v) return (n / v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + s;
+  }
+}
+function fmtTaxa(n) {
+  if (n < 1000 && n % 1 !== 0) return n.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+  return fmt(n);
+}
+
+// =====================================================================
+// DESENHO DA FAZENDA (pixel art no canvas)
+// =====================================================================
+const W = 256, H = 160;
+const canvas = document.getElementById('fazenda');
+const c = canvas.getContext('2d');
+c.imageSmoothingEnabled = false;
+
+function R(x, y, w, h, cor) { c.fillStyle = cor; c.fillRect(Math.round(x), Math.round(y), w, h); }
+function circulo(cx, cy, r, cor) {
+  c.fillStyle = cor;
+  for (let dy = -r; dy <= r; dy++) {
+    const w = Math.floor(Math.sqrt(r * r - dy * dy) + 0.5);
+    c.fillRect(Math.round(cx - w), Math.round(cy + dy), w * 2 + 1, 1);
+  }
+}
+
+// Gerador aleatório com semente (a sujeira fica sempre no mesmo lugar)
+function rng(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const rnd = rng(20240607);
+const entre = (a, b) => a + rnd() * (b - a);
+
+function areaLivre(x, y) {
+  if (x > 100 && x < 152 && y > 6 && y < 46) return false; // casa
+  if (x > 118 && x < 134 && y > 40) return rnd() < 0.3;   // caminho (pouca sujeira)
+  return true;
+}
+function gerarLista(n, fn) {
+  const lista = [];
+  let tentativas = 0;
+  while (lista.length < n && tentativas++ < n * 20) {
+    const x = Math.round(entre(10, 246)), y = Math.round(entre(14, 150));
+    if (areaLivre(x, y)) lista.push(fn(x, y));
+  }
+  return lista;
+}
+
+const CENARIO = {
+  manchas: gerarLista(20, (x, y) => ({ x, y, w: Math.round(entre(8, 20)), h: Math.round(entre(4, 9)) })),
+  graminhas: gerarLista(320, (x, y) => ({ x, y, v: Math.floor(rnd() * 3) })),
+  flores: gerarLista(45, (x, y) => ({ x, y, cor: ['#ff8fb1', '#ffd93d', '#ffffff', '#b28dff'][Math.floor(rnd() * 4)] })),
+  mato: gerarLista(80, (x, y) => ({ x, y, v: Math.floor(rnd() * 3) })),
+  pedras: gerarLista(20, (x, y) => ({ x, y, v: Math.floor(rnd() * 2) })),
+  lixo: gerarLista(16, (x, y) => ({ x, y, v: Math.floor(rnd() * 4) })),
+  galhos: gerarLista(14, (x, y) => ({ x, y, v: Math.floor(rnd() * 2) })),
+  cercaQuebrada: Array.from({ length: 140 }, () => ({ falta: rnd() < 0.28, torta: rnd() < 0.3 })),
+};
+
+// ---------- Chão ----------
+const CORES_CHAO = ['#8c8a4c', '#8ea14d', '#7fb048', '#73ba45', '#6cc24a'];
+const CORES_GRAMA = ['#76743c', '#76893c', '#649638', '#5ba036', '#55a83a'];
+function nivelLimpeza() { return ['mato', 'pedras', 'lixo', 'cerca'].filter(tem).length; }
+
+function desenharChao() {
+  const n = nivelLimpeza();
+  R(0, 0, W, H, CORES_CHAO[n]);
+  // manchas de terra suja que somem conforme a limpeza
+  const manchas = Math.round(CENARIO.manchas.length * (1 - n / 4));
+  for (let i = 0; i < manchas; i++) {
+    const m = CENARIO.manchas[i];
+    R(m.x - m.w / 2 + 2, m.y - m.h / 2, m.w - 4, m.h, '#7a6440');
+    R(m.x - m.w / 2, m.y - m.h / 2 + 1, m.w, m.h - 2, '#7a6440');
+  }
+  for (const g of CENARIO.graminhas) {
+    R(g.x, g.y, 1, g.v === 0 ? 2 : 1, CORES_GRAMA[n]);
+    if (g.v === 2) R(g.x + 1, g.y - 1, 1, 1, CORES_GRAMA[n]);
+  }
+  if (tem('cerca')) {
+    for (const f of CENARIO.flores) {
+      R(f.x, f.y, 1, 1, f.cor);
+      R(f.x, f.y + 1, 1, 1, '#3f8a2c');
+    }
+  }
+  // caminho de terra da casa até a porteira
+  R(122, 42, 9, 114, n >= 2 ? '#c9a46a' : '#9c8058');
+  R(121, 44, 1, 110, n >= 2 ? '#b8935a' : '#8a6f4a');
+  R(131, 44, 1, 110, n >= 2 ? '#b8935a' : '#8a6f4a');
+}
+
+// ---------- Sujeira ----------
+function desenharMato(m) {
+  const esc = '#4d6a28', cla = '#6f8f34';
+  if (m.v === 2) { // moita
+    circulo(m.x, m.y - 3, 3, esc);
+    R(m.x - 2, m.y - 5, 2, 1, cla); R(m.x + 1, m.y - 4, 1, 1, cla);
+  } else {
+    R(m.x, m.y - 5, 1, 5, esc);
+    R(m.x - 2, m.y - 3, 1, 3, esc);
+    R(m.x + 2, m.y - 4, 1, 4, esc);
+    R(m.x - 1, m.y - 6, 1, 2, cla);
+    R(m.x + 1, m.y - 7, 1, 3, cla);
+    if (m.v === 1) { R(m.x + 3, m.y - 2, 1, 2, cla); R(m.x - 3, m.y - 2, 1, 2, cla); }
+  }
+}
+function desenharPedra(p) {
+  if (p.v === 0) {
+    R(p.x - 2, p.y - 3, 5, 3, '#8d8d8d'); R(p.x - 1, p.y - 4, 3, 1, '#a9a9a9');
+    R(p.x - 2, p.y - 1, 5, 1, '#6a6a6a'); R(p.x - 1, p.y - 3, 1, 1, '#bdbdbd');
+  } else {
+    R(p.x - 4, p.y - 4, 8, 4, '#868686'); R(p.x - 3, p.y - 5, 6, 1, '#a3a3a3');
+    R(p.x - 4, p.y - 1, 8, 1, '#5e5e5e'); R(p.x - 2, p.y - 4, 2, 1, '#bdbdbd');
+    R(p.x + 1, p.y - 3, 1, 2, '#6e6e6e');
+  }
+}
+function desenharLixo(l) {
+  const { x, y } = l;
+  if (l.v === 0) { R(x, y - 3, 2, 3, '#b0b7bf'); R(x, y - 2, 2, 1, '#d64545'); }          // lata
+  else if (l.v === 1) { R(x, y - 2, 3, 2, '#f2efe6'); R(x + 1, y - 1, 1, 1, '#cfcabc'); } // papel
+  else if (l.v === 2) { R(x, y - 2, 4, 2, '#3c8d5a'); R(x + 4, y - 2, 1, 1, '#2c6d45'); R(x + 1, y - 2, 1, 1, '#7fd1a0'); } // garrafa
+  else { R(x - 2, y - 3, 5, 4, '#2b2b2b'); R(x - 1, y - 2, 3, 2, '#555'); }                // pneu velho
+}
+function desenharGalho(g) {
+  const cor = '#6b4a2f';
+  for (let i = 0; i < 7; i++) R(g.x + i, g.y - (g.v ? Math.floor(i / 2) : -Math.floor(i / 3)), 1, 1, cor);
+  R(g.x + 3, g.y - 3 + (g.v ? -1 : 2), 1, 2, '#7d5a3a');
+}
+
+// ---------- Cercas ----------
+function desenharCerca() {
+  const ok = tem('cerca');
+  const cor = ok ? '#fff4dc' : '#7a6a55', sombra = ok ? '#cdb994' : '#584a3a';
+  const q = CENARIO.cercaQuebrada;
+  let k = 0;
+  const estadoPoste = () => ok ? { falta: false, torta: false } : q[(k++) % q.length];
+
+  // topo e base (vista de frente)
+  for (const [y, porteira] of [[3, false], [150, true]]) {
+    for (let x = 2; x < 252; x += 8) {
+      if (porteira && x >= 118 && x < 134) continue;
+      const s = estadoPoste();
+      if (!s.falta) {
+        R(x + 1, y + 2, 7, 1, cor); R(x + 1, y + 5, 7, 1, cor);
+        R(x + 1, y + 3, 7, 1, sombra);
+      }
+      const t = s.torta ? 1 : 0;
+      if (!(s.falta && s.torta)) { R(x + t, y, 2, 7 - t, cor); R(x + t, y + 6 - t, 2, 1, sombra); }
+    }
+  }
+  // laterais (vista de cima)
+  for (const x of [2, 252]) {
+    for (let y = 6; y < 152; y += 8) {
+      const s = estadoPoste();
+      if (!s.falta) R(x, y, 2, 8, sombra);
+      R(x + (s.torta ? 1 : 0) - 0.5, y, 3, 3, cor);
+    }
+  }
+}
+function desenharCercadinho() {
+  if (!tem('cerca')) return;
+  const cor = '#fff4dc', sombra = '#cdb994';
+  for (let x = 134; x < 252; x += 8) {
+    R(x + 1, 56, 7, 1, cor); R(x + 1, 59, 7, 1, cor); R(x + 1, 57, 7, 1, sombra);
+    R(x, 54, 2, 7, cor);
+  }
+  for (let y = 60; y < 150; y += 8) {
+    if (y >= 96 && y < 112) continue; // portãozinho
+    R(134, y, 2, 8, sombra);
+    R(133.5, y, 3, 3, cor);
+  }
+  // cocho de água e feno
+  R(236, 64, 12, 5, '#8b5a2b'); R(237, 65, 10, 2, '#4aa3df');
+  if (tem('celeiro')) { R(140, 64, 9, 6, '#e9c46a'); R(140, 66, 9, 1, '#c9a043'); R(140, 68, 9, 1, '#c9a043'); }
+}
+
+// ---------- Construções ----------
+function telhado(cx, yTopo, linhas, larguraTopo, cor, cor2) {
+  for (let i = 0; i < linhas; i++) {
+    const w = larguraTopo + i * 2;
+    R(cx - w / 2, yTopo + i, w, 1, (cor2 && i % 2) ? cor2 : cor);
+  }
+}
+function desenharCasa(t) {
+  const cx = 126;
+  R(104, 42, 44, 2, 'rgba(0,0,0,.18)');
+  if (!tem('casa')) {
+    // casa velha caindo aos pedaços
+    telhado(cx, 10, 12, 20, '#5b4b3b', '#524333');
+    R(118, 13, 6, 4, '#2a2018'); R(134, 18, 4, 3, '#2a2018'); R(127, 11, 2, 2, CORES_CHAO[nivelLimpeza()]);
+    R(108, 22, 36, 20, '#8b7355');
+    for (let y = 24; y < 42; y += 3) R(108, y, 36, 1, '#76603f');
+    R(140, 26, 1, 8, '#5a4630'); R(110, 35, 3, 1, '#5a4630');
+    R(122, 30, 8, 12, '#4a3626'); R(123, 31, 1, 10, '#3a2a1c');
+    for (const wx of [112, 133]) {
+      R(wx, 27, 7, 6, '#2a2018');
+      for (let i = 0; i < 7; i++) { R(wx + i, 27 + Math.min(5, i), 1, 1, '#a0855f'); R(wx + 6 - i, 27 + Math.min(5, i), 1, 1, '#a0855f'); }
+    }
+  } else {
+    // casa reformada
+    R(136, 6, 5, 9, '#9a5b3f'); R(135, 5, 7, 2, '#7d4630');
+    telhado(cx, 10, 12, 20, '#e05a47', '#c94a3a');
+    R(108, 22, 36, 20, '#f6e3c3');
+    for (let y = 25; y < 42; y += 3) R(108, y, 36, 1, '#ead2ab');
+    R(121, 29, 10, 13, '#fff'); R(122, 30, 8, 12, '#a0663a'); R(128, 36, 1, 1, '#f5d742');
+    for (const wx of [111, 133]) {
+      R(wx - 1, 26, 9, 8, '#ffffff'); R(wx, 27, 7, 6, '#8fd3ff');
+      R(wx + 3, 27, 1, 6, '#ffffff'); R(wx, 29, 7, 1, '#ffffff');
+      R(wx - 1, 34, 9, 2, '#8b5a2b');
+      R(wx, 33, 1, 1, '#ff6f91'); R(wx + 3, 33, 1, 1, '#ffd93d'); R(wx + 6, 33, 1, 1, '#ff6f91');
+    }
+    // fumacinha da chaminé
+    for (let i = 0; i < 3; i++) {
+      const f = ((t / 1800) + i / 3) % 1;
+      const r = 1 + Math.floor(f * 2.5);
+      c.globalAlpha = 0.7 * (1 - f);
+      circulo(138 + Math.sin(f * 6 + i) * 2 + f * 4, 4 - f * 14, r, '#f0f0f0');
+      c.globalAlpha = 1;
+    }
+  }
+}
+function desenharPoco() {
+  if (!tem('poco')) return;
+  R(30, 38, 20, 2, 'rgba(0,0,0,.18)');
+  R(31, 16, 2, 14, '#7b4a2a'); R(47, 16, 2, 14, '#7b4a2a');
+  telhado(40, 9, 6, 12, '#b5543c', '#9c4430');
+  R(39, 16, 1, 8, '#d9c08c'); R(38, 23, 3, 3, '#8b5a2b');
+  R(30, 28, 20, 11, '#9aa0a6');
+  R(30, 28, 20, 2, '#4a90d9'); R(32, 28, 4, 1, '#8fd3ff');
+  for (let y = 31; y < 39; y += 3) for (let x = 30 + (y % 2) * 3; x < 50; x += 6) R(x, y, 5, 2, '#b4bac0');
+  R(30, 38, 20, 1, '#6f757b');
+}
+function desenharCeleiro() {
+  if (!tem('celeiro')) return;
+  R(192, 46, 40, 2, 'rgba(0,0,0,.18)');
+  telhado(212, 12, 12, 20, '#8e2b20', '#7a2219');
+  R(194, 24, 36, 22, '#c0392b');
+  for (let x = 196; x < 230; x += 4) R(x, 24, 1, 22, '#a93226');
+  R(194, 24, 1, 22, '#fff'); R(229, 24, 1, 22, '#fff');
+  R(207, 26, 10, 6, '#fff'); R(208, 27, 8, 4, '#5c1a12');
+  R(203, 33, 18, 13, '#fff'); R(204, 34, 16, 12, '#7b2318');
+  for (let i = 0; i < 12; i++) {
+    R(204 + Math.round(i * 16 / 12), 34 + i, 1, 1, '#fff');
+    R(219 - Math.round(i * 16 / 12), 34 + i, 1, 1, '#fff');
+  }
+  R(211, 34, 2, 12, '#fff');
+}
+
+// ---------- Plantações ----------
+function desenharCenouras(n, t) {
+  const total = Math.min(n, 12);
+  for (let i = 0; i < total; i++) {
+    const x = 14 + (i % 6) * 17, y = 54 + Math.floor(i / 6) * 13;
+    R(x, y, 14, 10, '#6b4226');
+    R(x, y + 3, 14, 1, '#5a3620'); R(x, y + 7, 14, 1, '#5a3620');
+    for (let j = 0; j < 3; j++) {
+      const cx = x + 2 + j * 5, cy = y + 6 + (j % 2) * 2 - 1;
+      const s = Math.sin(t / 500 + i + j) > 0.6 ? 1 : 0;
+      R(cx + 1, cy, 2, 1, '#f08a24');
+      R(cx + 1, cy - 3, 1, 3, '#3fa34d'); R(cx + s, cy - 2, 1, 1, '#56c05f'); R(cx + 2, cy - 2, 1, 1, '#56c05f');
+    }
+  }
+}
+function desenharMilho(n, t) {
+  const pes = Math.min(n * 2, 28);
+  for (let fileira = 0; fileira < 2; fileira++) {
+    const naFileira = Math.max(0, Math.min(14, pes - fileira * 14));
+    if (!naFileira) continue;
+    const yb = 96 + fileira * 14;
+    R(14, yb, naFileira * 7 + 1, 2, '#7a5230');
+    for (let i = 0; i < naFileira; i++) {
+      const x = 17 + i * 7;
+      const balanço = Math.round(Math.sin(t / 700 + i * 0.7 + fileira));
+      R(x, yb - 12, 1, 12, '#4c9a2a');
+      R(x - 2, yb - 8, 2, 1, '#5fb336'); R(x + 1, yb - 6, 2, 1, '#5fb336'); R(x - 2, yb - 3, 2, 1, '#5fb336');
+      R(x + 1, yb - 10, 2, 3, '#f5d742'); R(x + 1, yb - 7, 1, 1, '#d4b02c');
+      R(x - 1 + balanço, yb - 14, 3, 2, '#e9c46a');
+    }
+  }
+}
+function desenharArvores(n) {
+  const total = Math.min(n, 12);
+  const lista = [];
+  for (let i = 0; i < total; i++) {
+    const fileira = Math.floor(i / 6);
+    lista.push({ x: 22 + (i % 6) * 17 + fileira * 8, y: 132 + fileira * 15 - (fileira ? 0 : 0) });
+  }
+  lista.sort((a, b) => a.y - b.y);
+  for (const a of lista) {
+    R(a.x - 5, a.y, 11, 2, 'rgba(0,0,0,.18)');
+    R(a.x - 1, a.y - 6, 3, 7, '#7b4a2a');
+    circulo(a.x, a.y - 11, 6, '#3e8f3a');
+    circulo(a.x - 1, a.y - 12, 4, '#4fae45');
+    R(a.x - 3, a.y - 14, 2, 1, '#7fd067');
+    for (const [dx, dy] of [[-3, -10], [2, -13], [3, -8], [-1, -7], [0, -15]]) R(a.x + dx, a.y + dy, 2, 2, '#e63946');
+  }
+}
+
+// ---------- Animais ----------
+let animais = [];
+const LIMITES = { galinha: 12, ovelha: 8, vaca: 6 };
+const VELOCIDADE = { galinha: 12, ovelha: 6, vaca: 4 };
+const CERCADINHO = { x1: 144, x2: 240, y1: 70, y2: 146 };
+
+function novoAlvo(a) {
+  a.tx = entreR(CERCADINHO.x1, CERCADINHO.x2);
+  a.ty = entreR(CERCADINHO.y1, CERCADINHO.y2);
+}
+function entreR(a, b) { return a + Math.random() * (b - a); }
+
+function sincronizarAnimais() {
+  for (const tipo of Object.keys(LIMITES)) {
+    const desejado = Math.min(LIMITES[tipo], qtd(tipo));
+    let atuais = animais.filter(a => a.tipo === tipo);
+    while (atuais.length < desejado) {
+      const a = { tipo, x: entreR(CERCADINHO.x1, CERCADINHO.x2), y: entreR(CERCADINHO.y1, CERCADINHO.y2), dir: 1, espera: Math.random() * 2, fase: Math.random() * 10 };
+      novoAlvo(a);
+      animais.push(a); atuais.push(a);
+    }
+    if (atuais.length > desejado) {
+      const sobram = new Set(atuais.slice(desejado));
+      animais = animais.filter(a => !sobram.has(a));
+    }
+  }
+}
+function atualizarAnimais(dt) {
+  for (const a of animais) {
+    if (a.espera > 0) { a.espera -= dt; continue; }
+    const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy);
+    const v = VELOCIDADE[a.tipo] * dt;
+    if (d <= v) { a.x = a.tx; a.y = a.ty; a.espera = 1 + Math.random() * 3.5; novoAlvo(a); }
+    else { a.x += dx / d * v; a.y += dy / d * v; if (Math.abs(dx) > 0.5) a.dir = dx > 0 ? 1 : -1; }
+  }
+}
+function desenharAnimal(a, t) {
+  const x = Math.round(a.x), y = Math.round(a.y), dir = a.dir;
+  const P = (dx, dy, w, h, cor) => R(dir > 0 ? x + dx : x - dx - w + 1, y + dy, w, h, cor);
+  const andando = a.espera <= 0;
+  const passo = andando ? (Math.floor(t / 150 + a.fase) % 2) : 0;
+  if (a.tipo === 'galinha') {
+    const bica = !andando && Math.sin(t / 120 + a.fase) > 0.3 ? 2 : 0;
+    R(x - 3, y, 7, 1, 'rgba(0,0,0,.15)');
+    P(-1, -1, 1, 1, '#f5a623'); P(1 + passo, -1, 1, 1, '#f5a623');
+    P(-4, -6, 2, 2, '#e8e8e8');
+    P(-3, -5, 6, 4, '#ffffff');
+    P(-2, -4, 3, 2, '#e3e3e3');
+    P(1 + (bica ? 1 : 0), -8 + bica, 3, 3, '#ffffff');
+    P(2 + (bica ? 1 : 0), -9 + bica, 2, 1, '#e63946');
+    P(3 + (bica ? 1 : 0), -7 + bica, 1, 1, '#222');
+    P(4 + (bica ? 1 : 0), -6 + bica, 1, 1, '#f5a623');
+    P(3 + (bica ? 1 : 0), -5 + bica, 1, 1, '#e63946');
+  } else if (a.tipo === 'ovelha') {
+    R(x - 5, y, 11, 1, 'rgba(0,0,0,.15)');
+    P(-3, -2, 1, 2, '#3a3a3a'); P(-1 + passo, -2, 1, 2, '#3a3a3a'); P(1, -2, 1, 2, '#3a3a3a'); P(3 - passo, -2, 1, 2, '#3a3a3a');
+    P(-4, -7, 9, 5, '#f6f6f6'); P(-3, -8, 7, 1, '#f6f6f6'); P(-4, -3, 9, 1, '#dcdcdc');
+    P(-2, -7, 1, 1, '#ffffff'); P(1, -8, 1, 1, '#ffffff');
+    P(4, -8, 3, 3, '#3a3a3a'); P(4, -9, 1, 1, '#3a3a3a'); P(6, -7, 1, 1, '#ffffff');
+  } else if (a.tipo === 'vaca') {
+    R(x - 7, y, 15, 1, 'rgba(0,0,0,.15)');
+    P(-5, -3, 1, 3, '#f2f2f2'); P(-3 + passo, -3, 1, 3, '#f2f2f2'); P(2, -3, 1, 3, '#f2f2f2'); P(4 - passo, -3, 1, 3, '#f2f2f2');
+    P(-5, -1, 1, 1, '#3a3a3a'); P(-3 + passo, -1, 1, 1, '#3a3a3a'); P(2, -1, 1, 1, '#3a3a3a'); P(4 - passo, -1, 1, 1, '#3a3a3a');
+    P(-6, -9, 12, 6, '#ffffff');
+    P(-4, -8, 3, 2, '#2b2b2b'); P(1, -6, 3, 2, '#2b2b2b'); P(-6, -5, 2, 1, '#2b2b2b'); P(3, -9, 2, 1, '#2b2b2b');
+    P(-1, -3, 2, 1, '#f7b2c4');
+    P(-7, -9, 1, 4, '#ffffff'); P(-7, -5, 1, 1, '#2b2b2b');
+    P(6, -11, 4, 4, '#ffffff'); P(6, -11, 1, 1, '#e8d9a0'); P(9, -12, 1, 1, '#e8d9a0');
+    P(8, -9, 1, 1, '#222'); P(8, -8, 3, 2, '#f7b2c4');
+  }
+}
+
+// ---------- Partículas ----------
+let particulas = [];
+function poeira(x, y, cores, n = 6, forca = 30) {
+  for (let i = 0; i < n; i++) {
+    const ang = Math.random() * Math.PI * 2, v = Math.random() * forca;
+    particulas.push({ x, y, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - 15, vida: 0.5 + Math.random() * 0.5, cor: cores[Math.floor(Math.random() * cores.length)] });
+  }
+}
+function atualizarParticulas(dt) {
+  for (const p of particulas) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 60 * dt; p.vida -= dt; }
+  particulas = particulas.filter(p => p.vida > 0);
+}
+function desenharParticulas() {
+  for (const p of particulas) { c.globalAlpha = Math.min(1, p.vida * 2); R(p.x, p.y, 1, 1, p.cor); }
+  c.globalAlpha = 1;
+}
+
+// ---------- Cena completa ----------
+function desenhar(t) {
+  desenharChao();
+  desenharCercadinho();
+  if (!tem('mato')) CENARIO.mato.forEach(desenharMato);
+  if (!tem('pedras')) CENARIO.pedras.forEach(desenharPedra);
+  if (!tem('lixo')) { CENARIO.galhos.forEach(desenharGalho); CENARIO.lixo.forEach(desenharLixo); }
+  desenharPoco();
+  desenharCeleiro();
+  desenharCasa(t);
+  desenharCenouras(qtd('cenoura'), t);
+  desenharMilho(qtd('milho'), t);
+  desenharArvores(qtd('pomar'));
+  [...animais].sort((a, b) => a.y - b.y).forEach(a => desenharAnimal(a, t));
+  desenharCerca();
+  desenharParticulas();
+}
+
+// Onde cada compra "acontece" na fazenda (para o efeito de brilho)
+const LOCAL_COMPRA = {
+  cenoura: [64, 62], milho: [64, 100], pomar: [64, 135], galinha: [190, 100], ovelha: [190, 100], vaca: [190, 100],
+  poco: [40, 28], celeiro: [212, 30], casa: [126, 28],
+};
+
+// =====================================================================
+// INTERFACE
+// =====================================================================
+const $ = id => document.getElementById(id);
+const elMoedas = $('moedas'), elClique = $('porClique'), elSeg = $('porSegundo');
+const elAbas = $('abas'), elItens = $('itens'), wrap = $('fazendaWrap');
+let abaAtual = 'limpeza';
+
+function aviso(texto) {
+  const d = document.createElement('div');
+  d.className = 'aviso'; d.textContent = texto;
+  $('avisos').appendChild(d);
+  setTimeout(() => d.remove(), 3800);
+  while ($('avisos').children.length > 3) $('avisos').firstChild.remove();
+}
+
+function montarAbas() {
+  elAbas.innerHTML = '';
+  for (const cat of CATEGORIAS) {
+    const b = document.createElement('button');
+    b.className = 'aba' + (cat.id === abaAtual ? ' ativa' : '');
+    b.dataset.cat = cat.id;
+    b.innerHTML = `${cat.nome}<span class="ponto"></span>`;
+    b.addEventListener('click', () => { abaAtual = cat.id; montarAbas(); montarLoja(); });
+    elAbas.appendChild(b);
+  }
+}
+
+function textoReq(item) {
+  return item.req.filter(([id, n]) => qtd(id) < n)
+    .map(([id, n]) => n > 1 ? `${n}× ${ITEM[id].nome}` : ITEM[id].nome).join(' + ');
+}
+function textoEfeito(item) {
+  const partes = [];
+  if (item.clique) partes.push(`+${fmt(item.clique)} moedas por clique`);
+  if (item.porSeg) partes.push(item.unico ? `+${fmt(item.porSeg)}/s` : `+${fmt(item.porSeg)}/s cada`);
+  return partes.join(' · ');
+}
+
+function montarLoja() {
+  elItens.innerHTML = '';
+  for (const item of ITENS.filter(i => i.cat === abaAtual)) {
+    const b = document.createElement('button');
+    b.className = 'item';
+    b.dataset.id = item.id;
+    const feito = item.unico && tem(item.id);
+    const lib = liberado(item);
+    if (!lib && !visivel(item)) {
+      b.classList.add('bloqueado', 'misterio');
+      b.innerHTML = `<div class="ico">${item.ico}</div>
+        <div class="info"><div class="nome">???</div><div class="desc">Continue reconstruindo a fazenda para descobrir.</div></div>
+        <div class="preco">🔒</div>`;
+    } else if (!lib) {
+      b.classList.add('bloqueado');
+      b.innerHTML = `<div class="ico">${item.ico}</div>
+        <div class="info"><div class="nome">${item.nome}</div><div class="desc">🔒 Requer: ${textoReq(item)}</div>
+        <div class="efeito">${textoEfeito(item)}</div></div>
+        <div class="preco">🔒</div>`;
+    } else {
+      if (feito) b.classList.add('feito');
+      const q = !item.unico && qtd(item.id) ? `<span class="qtd">×${qtd(item.id)}</span>` : '';
+      b.innerHTML = `<div class="ico">${item.ico}</div>
+        <div class="info"><div class="nome">${item.nome}${q}</div><div class="desc">${item.desc}</div>
+        <div class="efeito">${textoEfeito(item)}</div></div>
+        <div class="preco">${feito ? '✔ Feito' : '🪙 ' + fmt(custoDe(item))}</div>`;
+      if (!feito) b.addEventListener('click', () => comprar(item));
+    }
+    elItens.appendChild(b);
+  }
+  atualizarLoja();
+}
+
+// Atualiza só o que muda com o tempo (se dá ou não para comprar)
+function atualizarLoja() {
+  for (const b of elItens.children) {
+    const item = ITEM[b.dataset.id];
+    if (b.classList.contains('bloqueado') || b.classList.contains('feito')) continue;
+    b.classList.toggle('caro', estado.moedas < custoDe(item));
+  }
+  for (const aba of elAbas.children) {
+    const temCompra = ITENS.some(i => i.cat === aba.dataset.cat && liberado(i) && !(i.unico && tem(i.id)) && estado.moedas >= custoDe(i));
+    aba.querySelector('.ponto').classList.toggle('on', temCompra);
+  }
+}
+
+function atualizarHUD() {
+  elMoedas.textContent = fmt(estado.moedas);
+  elClique.textContent = fmt(moedasPorClique());
+  elSeg.textContent = fmtTaxa(moedasPorSegundo());
+  const unicos = ITENS.filter(i => i.unico);
+  const pct = Math.round(unicos.filter(i => tem(i.id)).length / unicos.length * 100);
+  $('progTxt').textContent = pct + '%';
+  $('progBarra').style.width = pct + '%';
+}
+
+function comprar(item) {
+  if (!liberado(item) || (item.unico && tem(item.id))) return;
+  const custo = custoDe(item);
+  if (estado.moedas < custo) { aviso('Moedas insuficientes! 🪙'); return; }
+  estado.moedas -= custo;
+  estado.itens[item.id] = qtd(item.id) + 1;
+
+  // efeitos visuais
+  if (item.id === 'mato') CENARIO.mato.forEach(m => poeira(m.x, m.y - 3, ['#4d6a28', '#6f8f34', '#a7c957'], 3));
+  else if (item.id === 'pedras') CENARIO.pedras.forEach(p => poeira(p.x, p.y - 2, ['#8d8d8d', '#bdbdbd', '#d9c9a3'], 5));
+  else if (item.id === 'lixo') [...CENARIO.lixo, ...CENARIO.galhos].forEach(l => poeira(l.x, l.y - 2, ['#b0b7bf', '#f2efe6', '#6b4a2f', '#d9c9a3'], 4));
+  else if (item.id === 'cerca') for (let x = 6; x < 250; x += 20) { poeira(x, 6, ['#fff4dc', '#ffd93d'], 3); poeira(x, 153, ['#fff4dc', '#ffd93d'], 3); }
+  else if (LOCAL_COMPRA[item.id]) { const [x, y] = LOCAL_COMPRA[item.id]; poeira(x, y, ['#ffe066', '#fff', '#ffd93d'], 18, 45); }
+
+  sincronizarAnimais();
+  aviso(item.msg || `${item.nome} comprado!`);
+  montarLoja();
+  atualizarHUD();
+  salvar();
+}
+
+// ---------- Clique na fazenda ----------
+canvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  const ganho = moedasPorClique();
+  estado.moedas += ganho;
+  estado.cliques++;
+
+  const rc = canvas.getBoundingClientRect(), rw = wrap.getBoundingClientRect();
+  const f = document.createElement('div');
+  f.className = 'flutua';
+  f.textContent = '+' + fmt(ganho);
+  f.style.left = (e.clientX - rw.left) + 'px';
+  f.style.top = (e.clientY - rw.top) + 'px';
+  wrap.appendChild(f);
+  setTimeout(() => f.remove(), 900);
+
+  const cx = (e.clientX - rc.left) / rc.width * W, cy = (e.clientY - rc.top) / rc.height * H;
+  poeira(cx, cy, ['#ffe066', '#ffd93d', '#fff6b0'], 5, 35);
+
+  if (estado.cliques === 10) $('dica').textContent = '🛒 Use as moedas na loja para limpar e reconstruir a fazenda!';
+  atualizarHUD();
+});
+
+// ---------- Reiniciar ----------
+$('btnReiniciar').addEventListener('click', () => $('modal').classList.add('aberto'));
+$('btnCancelar').addEventListener('click', () => $('modal').classList.remove('aberto'));
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal') $('modal').classList.remove('aberto'); });
+$('btnConfirmar').addEventListener('click', () => {
+  try { localStorage.removeItem(CHAVE_SAVE); } catch (e) {}
+  estado = novoEstado();
+  animais = []; particulas = [];
+  abaAtual = 'limpeza';
+  $('modal').classList.remove('aberto');
+  $('dica').textContent = '👆 Clique na fazenda para ganhar moedas e começar a reconstrução!';
+  montarAbas(); montarLoja(); atualizarHUD(); salvar();
+  aviso('A fazenda voltou ao começo. Boa sorte! 🌱');
+});
+
+// =====================================================================
+// LOOP PRINCIPAL
+// =====================================================================
+carregar();
+// Ganhos enquanto o jogador esteve fora (até 2 horas)
+{
+  const fora = Math.min(Date.now() - (estado.salvoEm || Date.now()), 2 * 3600 * 1000) / 1000;
+  const ganho = moedasPorSegundo() * fora;
+  if (ganho >= 1) {
+    estado.moedas += ganho;
+    setTimeout(() => aviso(`Enquanto você esteve fora, a fazenda rendeu 🪙 ${fmt(ganho)}!`), 400);
+  }
+}
+if (estado.cliques >= 10) $('dica').textContent = '🛒 Use as moedas na loja para limpar e reconstruir a fazenda!';
+sincronizarAnimais();
+montarAbas();
+montarLoja();
+atualizarHUD();
+
+let ultimoQuadro = performance.now();
+let ultimaRenda = Date.now();
+let ultimaLoja = 0;
+function quadro(t) {
+  const dt = Math.min(0.1, (t - ultimoQuadro) / 1000);
+  ultimoQuadro = t;
+
+  // a renda usa o relógio real, então não se perde nada com a aba em segundo plano
+  const agora = Date.now();
+  estado.moedas += moedasPorSegundo() * (agora - ultimaRenda) / 1000;
+  ultimaRenda = agora;
+
+  atualizarAnimais(dt);
+  atualizarParticulas(dt);
+  desenhar(t);
+  atualizarHUD();
+  if (t - ultimaLoja > 200) { atualizarLoja(); ultimaLoja = t; }
+  requestAnimationFrame(quadro);
+}
+requestAnimationFrame(quadro);
+
+setInterval(salvar, 5000);
+window.addEventListener('beforeunload', salvar);
+document.addEventListener('visibilitychange', () => { if (document.hidden) salvar(); });
+})();
+</script>
+</body>
+</html>
