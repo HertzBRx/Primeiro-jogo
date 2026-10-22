@@ -113,6 +113,16 @@
 
   /* ---------- Loja ---------- */
   .loja-titulo { margin: 0; padding: 10px 14px 4px; font-size: 20px; }
+  .lotes { display: flex; align-items: center; gap: 4px; padding: 2px 10px 4px; font-size: 13px; font-weight: bold; }
+  .lotes span { margin-right: 2px; }
+  .lotes button {
+    font: inherit; cursor: pointer; padding: 3px 10px; border-radius: 8px; min-width: 44px;
+    border: 2px solid var(--madeira); background: #fffdf5; color: var(--texto);
+  }
+  .lotes button.ativo { background: var(--verde); border-color: var(--verde-escuro); color: #fff; }
+  .lotes.oculto { visibility: hidden; }
+  .item .preco small { font-size: 11px; opacity: .8; }
+  .item:disabled { color: inherit; }
   .abas { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 10px; }
   .aba {
     position: relative; flex: 1 1 auto;
@@ -193,6 +203,29 @@
     animation: aparece .3s ease-out, some .5s ease-in 3.2s forwards;
   }
   .aviso.grande { background: #fff1b8; font-size: 17px; }
+  .aviso.conquista { background: linear-gradient(#fff6c8, #ffe58a); border-color: #b8860b; box-shadow: 0 3px 0 #8a6408; font-size: 16px; }
+  .aviso.conquista small { display: block; font-size: 12px; font-weight: normal; }
+
+  /* ---------- Conquistas ---------- */
+  .resumo-conquistas {
+    text-align: center; font-weight: bold; padding: 8px; border-radius: 10px;
+    background: #fff1b8; border: 2px solid #c99a2e;
+  }
+  .resumo-conquistas small { display: block; font-weight: normal; font-size: 12px; }
+  .cq {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border: 3px solid var(--madeira); border-radius: 10px; background: #ece3cf;
+  }
+  .cq .ico { font-size: 26px; width: 36px; text-align: center; flex-shrink: 0; }
+  .cq .info { flex: 1; min-width: 0; }
+  .cq .nome { font-weight: bold; font-size: 15px; }
+  .cq .desc { font-size: 12px; opacity: .85; }
+  .cq .bonus { font-weight: bold; font-size: 13px; white-space: nowrap; color: var(--verde-escuro); }
+  .cq.ok { background: linear-gradient(#fffbe6, #fff1b8); border-color: #c99a2e; box-shadow: 0 3px 0 #a07a1a; }
+  .cq.trancada .nome { opacity: .75; }
+  .cq .mini { height: 6px; margin-top: 4px; background: #d8ccb2; border-radius: 4px; overflow: hidden; }
+  .cq .mini > div { height: 100%; background: var(--verde); }
+  .cq .prog { font-size: 11px; opacity: .8; margin-top: 2px; }
   @keyframes aparece { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
   @keyframes some { to { opacity: 0; transform: translateY(8px); } }
 
@@ -247,6 +280,10 @@
 
   <section class="loja-col painel">
     <h2 class="loja-titulo">🛒 Loja</h2>
+    <div class="lotes" id="lotes">
+      <span>Comprar:</span>
+      <button data-lote="1">1x</button><button data-lote="5">5x</button><button data-lote="10">10x</button><button data-lote="max">Máx</button>
+    </div>
     <div class="abas" id="abas"></div>
     <div class="itens" id="itens"></div>
   </section>
@@ -280,6 +317,7 @@ const CATEGORIAS = [
   { id: 'plantacoes',  nome: '🌱 Plantações' },
   { id: 'animais',     nome: '🐾 Animais' },
   { id: 'construcoes', nome: '🔨 Construções' },
+  { id: 'conquistas',  nome: '🏆 Conquistas' },
 ];
 
 const ITENS = [
@@ -379,16 +417,20 @@ const CRESCIMENTO = 1.15; // cada compra de item repetível fica 15% mais cara
 // =====================================================================
 const CHAVE_SAVE = 'fazendinha-renascida-v1';
 const CHAVE_CONFIG = 'fazendinha-renascida-config';
-const novoEstado = () => ({ moedas: 0, itens: {}, cliques: 0, salvoEm: Date.now() });
+const novoEstado = () => ({ moedas: 0, itens: {}, cliques: 0, ganhoTotal: 0, tempoJogo: 0, conquistas: {}, salvoEm: Date.now() });
 let estado = novoEstado();
-let config = { musica: true, efeitos: true };
+let config = { musica: true, efeitos: true, lote: 1 };
 
 function carregar() {
   try {
     const bruto = localStorage.getItem(CHAVE_SAVE);
     if (bruto) {
-      estado = Object.assign(novoEstado(), JSON.parse(bruto));
+      const dados = JSON.parse(bruto);
+      estado = Object.assign(novoEstado(), dados);
       estado.itens = estado.itens || {};
+      estado.conquistas = estado.conquistas || {};
+      // saves de versões antigas não tinham o total ganho: começa pelo saldo atual
+      if (dados.ganhoTotal === undefined) estado.ganhoTotal = estado.moedas;
     }
   } catch (e) { estado = novoEstado(); }
   try { Object.assign(config, JSON.parse(localStorage.getItem(CHAVE_CONFIG) || '{}')); } catch (e) {}
@@ -422,6 +464,32 @@ const tem = id => qtd(id) > 0;
 function custoDe(item) {
   return item.unico ? item.custo : Math.floor(item.custo * Math.pow(CRESCIMENTO, qtd(item.id)));
 }
+// Custo exato das próximas n unidades (cada compra fica mais cara)
+function custoLote(item, n) {
+  if (item.unico) return item.custo;
+  const k = qtd(item.id);
+  let total = 0;
+  for (let i = 0; i < n; i++) total += Math.floor(item.custo * Math.pow(CRESCIMENTO, k + i));
+  return total;
+}
+// Quantas unidades as moedas atuais conseguem pagar
+function maxAcessivel(item) {
+  if (item.unico) return estado.moedas >= item.custo ? 1 : 0;
+  const r = CRESCIMENTO, base = item.custo * Math.pow(r, qtd(item.id));
+  if (!(estado.moedas >= Math.floor(base))) return 0;
+  // fórmula da soma geométrica, depois ajuste fino por causa dos arredondamentos
+  let n = Math.floor(Math.log(estado.moedas * (r - 1) / base + 1) / Math.log(r));
+  n = Math.max(1, Math.min(n, 5000));
+  while (n > 1 && custoLote(item, n) > estado.moedas) n--;
+  while (n < 5000 && custoLote(item, n + 1) <= estado.moedas) n++;
+  return n;
+}
+// Quantidade que um clique na loja vai comprar, conforme o seletor 1x/5x/10x/Máx
+function loteDe(item) {
+  if (item.unico) return 1;
+  if (config.lote === 'max') return Math.max(1, maxAcessivel(item));
+  return config.lote;
+}
 function liberado(item) {
   return !item.req || item.req.every(([id, n]) => qtd(id) >= n);
 }
@@ -434,6 +502,9 @@ function multiplicador(campo) {
   return m;
 }
 function moedasPorSegundo() {
+  return producaoBase() * bonusConquistas();
+}
+function producaoBase() {
   const mp = multiplicador('multPlantas'), ma = multiplicador('multAnimais'), mtm = multiplicador('multTrigoMilho');
   let total = 0;
   for (const it of ITENS) {
@@ -453,6 +524,55 @@ function moedasPorClique() {
     if (it.cliquePct && tem(it.id)) pct += it.cliquePct;
   }
   return Math.floor(base * multiplicador('multClique') + moedasPorSegundo() * pct);
+}
+function ganhar(v) { estado.moedas += v; estado.ganhoTotal += v; }
+
+// =====================================================================
+// CONQUISTAS
+// =====================================================================
+// prog() devolve [atual, alvo]; a conquista é desbloqueada quando atual >= alvo.
+// bonus: % a mais de moedas por segundo (somado entre todas as conquistas).
+const contar = ids => ids.filter(tem).length;
+const somaCat = cat => ITENS.filter(i => i.cat === cat).reduce((s, i) => s + qtd(i.id), 0);
+const tiposCat = cat => ITENS.filter(i => i.cat === cat && tem(i.id)).length;
+const totalCat = cat => ITENS.filter(i => i.cat === cat).length;
+const UNICOS = ITENS.filter(i => i.unico);
+function fmtTempo(seg) {
+  const h = Math.floor(seg / 3600), m = Math.floor(seg % 3600 / 60);
+  return h ? `${h}h ${String(m).padStart(2, '0')}min` : `${m} min`;
+}
+const CONQUISTAS = [
+  { id: 'clique1', nome: 'Primeiro clique', ico: '👆', desc: 'Clique na fazenda pela primeira vez.', bonus: 1, prog: () => [estado.cliques, 1] },
+  { id: 'clique100', nome: 'Dedos calejados', ico: '💪', desc: 'Clique 100 vezes na fazenda.', bonus: 1, prog: () => [estado.cliques, 100] },
+  { id: 'clique1000', nome: 'Mão de obra', ico: '🖐️', desc: 'Clique 1.000 vezes na fazenda.', bonus: 1, prog: () => [estado.cliques, 1000] },
+  { id: 'clique10000', nome: 'Clique incansável', ico: '⚡', desc: 'Clique 10.000 vezes na fazenda.', bonus: 2, prog: () => [estado.cliques, 10000] },
+  { id: 'ganho1k', nome: 'Primeiras economias', ico: '🪙', desc: 'Ganhe 1.000 moedas no total.', bonus: 1, prog: () => [estado.ganhoTotal, 1e3] },
+  { id: 'ganho1m', nome: 'Milionário da roça', ico: '💰', desc: 'Ganhe 1 milhão de moedas no total.', bonus: 2, prog: () => [estado.ganhoTotal, 1e6] },
+  { id: 'ganho1b', nome: 'Bilionário da roça', ico: '🏦', desc: 'Ganhe 1 bilhão de moedas no total.', bonus: 3, prog: () => [estado.ganhoTotal, 1e9] },
+  { id: 'seg100', nome: 'Fazenda produtiva', ico: '⏱️', desc: 'Produza 100 moedas por segundo.', bonus: 1, prog: () => [moedasPorSegundo(), 100] },
+  { id: 'seg10k', nome: 'Agronegócio', ico: '📈', desc: 'Produza 10.000 moedas por segundo.', bonus: 2, prog: () => [moedasPorSegundo(), 1e4] },
+  { id: 'cenoura1', nome: 'Primeira colheita', ico: '🥕', desc: 'Plante o primeiro canteiro de cenoura.', bonus: 1, prog: () => [qtd('cenoura'), 1] },
+  { id: 'plantas100', nome: 'Mão verde', ico: '🌱', desc: 'Tenha 100 plantações no total.', bonus: 1, prog: () => [somaCat('plantacoes'), 100] },
+  { id: 'todasPlantas', nome: 'Horta completa', ico: '🧺', desc: 'Tenha pelo menos uma de cada plantação.', bonus: 2, prog: () => [tiposCat('plantacoes'), totalCat('plantacoes')] },
+  { id: 'galinha1', nome: 'Primeira galinha', ico: '🐔', desc: 'Compre sua primeira galinha.', bonus: 1, prog: () => [qtd('galinha'), 1] },
+  { id: 'galinha10', nome: 'Galinheiro animado', ico: '🐣', desc: 'Tenha 10 galinhas.', bonus: 1, prog: () => [qtd('galinha'), 10] },
+  { id: 'galinha100', nome: 'Granja de respeito', ico: '🥚', desc: 'Tenha 100 galinhas.', bonus: 2, prog: () => [qtd('galinha'), 100] },
+  { id: 'vaca1', nome: 'Muuuito bem!', ico: '🐄', desc: 'Compre sua primeira vaca.', bonus: 1, prog: () => [qtd('vaca'), 1] },
+  { id: 'arca', nome: 'Arca de Noé', ico: '🚢', desc: 'Tenha pelo menos um de cada animal.', bonus: 2, prog: () => [tiposCat('animais'), totalCat('animais')] },
+  { id: 'sede', nome: 'Casa arrumada', ico: '🧹', desc: 'Limpe a sede: mato, pedras, lixo e cerca.', bonus: 1, prog: () => [contar(['mato', 'pedras', 'lixo', 'cerca']), 4] },
+  { id: 'limpeza', nome: 'Fazenda limpinha', ico: '✨', desc: 'Conclua todas as limpezas e reparos da fazenda.', bonus: 3, prog: () => [tiposCat('limpeza'), totalCat('limpeza')] },
+  { id: 'ferramentas', nome: 'Caixa de ferramentas', ico: '🧰', desc: 'Tenha todas as ferramentas.', bonus: 2, prog: () => [tiposCat('ferramentas'), totalCat('ferramentas')] },
+  { id: 'casa', nome: 'Lar, doce lar', ico: '🏡', desc: 'Reforme a casa da fazenda.', bonus: 2, prog: () => [qtd('casa'), 1] },
+  { id: 'renascida', nome: 'Fazenda renascida', ico: '🌻', desc: 'Reconstrua 100% da fazenda.', bonus: 5, prog: () => [UNICOS.filter(i => tem(i.id)).length, UNICOS.length] },
+  { id: 'tempo10m', nome: 'Pegando o jeito', ico: '⏳', desc: 'Jogue por 10 minutos.', bonus: 1, prog: () => [estado.tempoJogo, 600], tempo: true },
+  { id: 'tempo1h', nome: 'Fazendeiro dedicado', ico: '⌛', desc: 'Jogue por 1 hora.', bonus: 2, prog: () => [estado.tempoJogo, 3600], tempo: true },
+  { id: 'tempo5h', nome: 'Vida no campo', ico: '🌄', desc: 'Jogue por 5 horas.', bonus: 3, prog: () => [estado.tempoJogo, 18000], tempo: true },
+];
+const temConquista = id => !!estado.conquistas[id];
+function bonusConquistas() {
+  let pct = 0;
+  for (const cq of CONQUISTAS) if (temConquista(cq.id)) pct += cq.bonus;
+  return 1 + pct / 100;
 }
 
 // =====================================================================
@@ -590,6 +710,16 @@ const Som = {
     });
     this.tom(1318.5, t + 0.5, 0.9, { vol: 0.1 });
     this.tom(1046.5, t + 0.5, 0.9, { tipo: 'triangle', vol: 0.08 });
+  },
+  conquista() {
+    if (!this.pronto()) return;
+    const t = this.ctx.currentTime;
+    [783.99, 1046.5, 1318.5, 1568, 2093].forEach((f, i) => {
+      this.tom(f, t + i * 0.08, 0.5, { tipo: 'triangle', vol: 0.11 });
+      this.tom(f * 2, t + i * 0.08, 0.25, { vol: 0.025 });
+    });
+    for (const f of [1046.5, 1318.5, 1568]) this.tom(f, t + 0.45, 1.2, { vol: 0.07, ataque: 0.02 });
+    for (let i = 0; i < 6; i++) this.tom(3000 + Math.random() * 2500, t + 0.5 + i * 0.07, 0.12, { vol: 0.025 });
   },
   erro() {
     if (!this.pronto()) return;
@@ -1783,6 +1913,16 @@ function aviso(texto, grande) {
   while ($('avisos').children.length > 3) $('avisos').firstChild.remove();
 }
 
+function atualizarLotes() {
+  for (const b of $('lotes').querySelectorAll('button')) b.classList.toggle('ativo', String(config.lote) === b.dataset.lote);
+}
+$('lotes').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  config.lote = b.dataset.lote === 'max' ? 'max' : Number(b.dataset.lote);
+  salvarConfig(); atualizarLotes(); atualizarLoja();
+});
+
 function montarAbas() {
   elAbas.innerHTML = '';
   for (const cat of CATEGORIAS) {
@@ -1790,7 +1930,12 @@ function montarAbas() {
     b.className = 'aba' + (cat.id === abaAtual ? ' ativa' : '');
     b.dataset.cat = cat.id;
     b.innerHTML = `${cat.nome}<span class="ponto"></span>`;
-    b.addEventListener('click', () => { abaAtual = cat.id; montarAbas(); montarLoja(); });
+    b.addEventListener('click', () => {
+      abaAtual = cat.id;
+      if (cat.id === 'conquistas') conquistaNaoVista = false;
+      montarAbas(); montarLoja();
+    });
+    if (cat.id === 'conquistas') b.title = 'Conquistas';
     elAbas.appendChild(b);
   }
 }
@@ -1831,12 +1976,15 @@ function cartaoItem(item) {
       <div class="info"><div class="nome">${item.nome}${q}</div><div class="desc">${item.desc}</div>
       <div class="efeito">${textoEfeito(item)}</div></div>
       <div class="preco">${feito ? '✔ Feito' : '🪙 ' + fmt(custoDe(item))}</div>`;
+    b.disabled = feito;
     if (!feito) b.addEventListener('click', () => comprar(item));
   }
   return b;
 }
 function montarLoja() {
   elItens.innerHTML = '';
+  $('lotes').classList.toggle('oculto', abaAtual === 'conquistas');
+  if (abaAtual === 'conquistas') { montarConquistas(); return; }
   const itens = ITENS.filter(i => i.cat === abaAtual);
   const concluidos = itens.filter(i => i.unico && tem(i.id));
   const pendentes = itens.filter(i => !concluidos.includes(i));
@@ -1866,14 +2014,78 @@ function montarLoja() {
 function atualizarLoja() {
   for (const b of elItens.querySelectorAll('.item')) {
     const item = ITEM[b.dataset.id];
-    if (b.classList.contains('bloqueado') || b.classList.contains('feito')) continue;
-    b.classList.toggle('caro', estado.moedas < custoDe(item));
+    if (b.classList.contains('bloqueado') || b.classList.contains('feito')) { b.disabled = true; continue; }
+    const n = loteDe(item), custo = custoLote(item, n), caro = !(estado.moedas >= custo);
+    b.classList.toggle('caro', caro);
+    b.disabled = caro;
+    // preço total do lote escolhido (só itens repetíveis mudam com o seletor)
+    const txt = '🪙 ' + fmt(custo) + (!item.unico && (n > 1 || config.lote === 'max') ? ` <small>×${n}</small>` : '');
+    const el = b.querySelector('.preco');
+    if (el.innerHTML !== txt) el.innerHTML = txt;
   }
+  if (abaAtual === 'conquistas') atualizarConquistas();
   for (const aba of elAbas.children) {
+    if (aba.dataset.cat === 'conquistas') { aba.querySelector('.ponto').classList.toggle('on', conquistaNaoVista); continue; }
     const temCompra = ITENS.some(i => i.cat === aba.dataset.cat && liberado(i) && !(i.unico && tem(i.id)) && estado.moedas >= custoDe(i));
     aba.querySelector('.ponto').classList.toggle('on', temCompra);
   }
 }
+function montarConquistas() {
+  const feitas = CONQUISTAS.filter(cq => temConquista(cq.id)).length;
+  const bonus = Math.round((bonusConquistas() - 1) * 100);
+  const resumo = document.createElement('div');
+  resumo.className = 'resumo-conquistas';
+  resumo.innerHTML = `🏆 ${feitas} de ${CONQUISTAS.length} conquistas<small>Bônus atual: +${bonus}% de moedas por segundo</small>`;
+  elItens.appendChild(resumo);
+  for (const cq of CONQUISTAS) {
+    const ok = temConquista(cq.id);
+    const d = document.createElement('div');
+    d.className = 'cq ' + (ok ? 'ok' : 'trancada');
+    d.dataset.cq = cq.id;
+    d.innerHTML = `<div class="ico">${ok ? cq.ico : '🔒'}</div>
+      <div class="info"><div class="nome">${cq.nome}</div><div class="desc">${cq.desc}</div>
+      ${ok ? '' : '<div class="mini"><div></div></div><div class="prog"></div>'}</div>
+      <div class="bonus">+${cq.bonus}%</div>`;
+    elItens.appendChild(d);
+  }
+  atualizarConquistas();
+}
+function atualizarConquistas() {
+  for (const d of elItens.querySelectorAll('.cq.trancada')) {
+    const cq = CONQUISTAS.find(x => x.id === d.dataset.cq);
+    const [atual, alvo] = cq.prog();
+    const f = cq.tempo ? fmtTempo : fmt;
+    d.querySelector('.mini > div').style.width = Math.min(100, atual / alvo * 100) + '%';
+    d.querySelector('.prog').textContent = `${f(Math.min(atual, alvo))} / ${f(alvo)}`;
+  }
+}
+// Confere conquistas novas; "silencioso" é usado ao carregar o jogo
+function verificarConquistas(silencioso) {
+  const novas = CONQUISTAS.filter(cq => !temConquista(cq.id) && (() => { const [a, b] = cq.prog(); return a >= b; })());
+  if (!novas.length) return;
+  for (const cq of novas) estado.conquistas[cq.id] = Date.now();
+  if (silencioso) {
+    setTimeout(() => aviso(`🏆 Você já tinha ${novas.length} conquista${novas.length > 1 ? 's' : ''}! Veja na aba Conquistas.`), 900);
+  } else {
+    novas.forEach((cq, i) => setTimeout(() => {
+      avisoConquista(cq);
+      Som.conquista();
+    }, i * 700));
+  }
+  if (abaAtual === 'conquistas') montarLoja();
+  salvar();
+}
+function avisoConquista(cq) {
+  const d = document.createElement('div');
+  d.className = 'aviso conquista';
+  d.innerHTML = `🏆 Conquista desbloqueada: ${cq.ico} ${cq.nome}!<small>+${cq.bonus}% de moedas por segundo</small>`;
+  $('avisos').appendChild(d);
+  setTimeout(() => d.remove(), 3800);
+  while ($('avisos').children.length > 3) $('avisos').firstChild.remove();
+  if (abaAtual !== 'conquistas') conquistaNaoVista = true;
+}
+let conquistaNaoVista = false;
+
 // Contadores com o total de cada animal (na tela aparecem no máximo LIMITES[tipo])
 const GRUPOS_ROTULO = [
   { x: 258, y: 121, tipos: ['galinha'] },                // na frente do galinheiro
@@ -1915,10 +2127,11 @@ function atualizarProgresso() {
 function comprar(item) {
   Som.iniciar();
   if (!liberado(item) || (item.unico && tem(item.id))) return;
-  const custo = custoDe(item);
-  if (estado.moedas < custo) { Som.erro(); aviso('Moedas insuficientes! 🪙'); return; }
+  const n = item.unico ? 1 : config.lote === 'max' ? maxAcessivel(item) : config.lote;
+  const custo = custoLote(item, Math.max(1, n));
+  if (n < 1 || estado.moedas < custo) { Som.erro(); aviso('Moedas insuficientes! 🪙'); return; }
   estado.moedas -= custo;
-  estado.itens[item.id] = qtd(item.id) + 1;
+  estado.itens[item.id] = qtd(item.id) + n;
 
   redesenharCaches();
   efeitoCompra(item);
@@ -1929,7 +2142,7 @@ function comprar(item) {
   else Som.compra();
   if (item.som) setTimeout(() => Som.animal(item.som), 250);
 
-  aviso(item.msg || `${item.nome} comprado!`, item.grande);
+  aviso(n > 1 ? `${item.ico} ${fmt(n)}× ${item.nome} comprados!` : (item.msg || `${item.nome} comprado!`), item.grande);
   montarLoja();
   atualizarHUD();
   atualizarProgresso();
@@ -1942,7 +2155,7 @@ canvas.addEventListener('pointerdown', e => {
   e.preventDefault();
   Som.iniciar();
   const ganho = moedasPorClique();
-  estado.moedas += ganho;
+  ganhar(ganho);
   estado.cliques++;
 
   const rc = canvas.getBoundingClientRect(), rw = wrap.getBoundingClientRect();
@@ -1997,6 +2210,7 @@ $('btnConfirmar').addEventListener('click', () => {
   estado = novoEstado();
   animais = []; particulas = [];
   abaAtual = 'limpeza';
+  conquistaNaoVista = false;
   $('modal').classList.remove('aberto');
   $('dica').textContent = '👆 Clique na fazenda para ganhar moedas e começar a reconstrução!';
   redesenharCaches();
@@ -2013,7 +2227,7 @@ carregar();
   const fora = Math.min(Date.now() - (estado.salvoEm || Date.now()), 2 * 3600 * 1000) / 1000;
   const ganho = moedasPorSegundo() * fora;
   if (ganho >= 1) {
-    estado.moedas += ganho;
+    ganhar(ganho);
     setTimeout(() => aviso(`Enquanto você esteve fora, a fazenda rendeu 🪙 ${fmt(ganho)}!`), 400);
   }
 }
@@ -2026,10 +2240,14 @@ montarLoja();
 atualizarHUD();
 atualizarProgresso();
 atualizarBotoesSom();
+atualizarLotes();
+verificarConquistas(true);
 
 let ultimoQuadro = performance.now();
 let ultimaRenda = Date.now();
 let ultimaLoja = 0;
+let ultimaConquista = 0;
+let ultimoQuadroTempo = performance.now();
 let proximoSomAmbiente = performance.now() + 8000;
 function quadro(t) {
   const dt = Math.min(0.1, (t - ultimoQuadro) / 1000);
@@ -2037,8 +2255,11 @@ function quadro(t) {
 
   // a renda usa o relógio real, então nada se perde com a aba em segundo plano
   const agora = Date.now();
-  estado.moedas += moedasPorSegundo() * (agora - ultimaRenda) / 1000;
+  ganhar(moedasPorSegundo() * (agora - ultimaRenda) / 1000);
   ultimaRenda = agora;
+  estado.tempoJogo += Math.min(1, (t - ultimoQuadroTempo) / 1000); // só conta com a página aberta
+  ultimoQuadroTempo = t;
+  if (t - ultimaConquista > 500) { verificarConquistas(); ultimaConquista = t; }
 
   // sons ambientes: animais e passarinhos de vez em quando
   if (t > proximoSomAmbiente) {
