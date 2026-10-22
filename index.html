@@ -1,0 +1,2290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fazendinha Renascida</title>
+<style>
+  :root {
+    --madeira: #8b5a2b;
+    --madeira-escura: #5e3b1a;
+    --papel: #fff8e7;
+    --papel-escuro: #f3e6c4;
+    --texto: #4a3020;
+    --verde: #5cae3e;
+    --verde-escuro: #3d7f28;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(#a8dcff 0%, #d6f0ff 45%, #e6f5cf 100%);
+    font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+    color: var(--texto);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---------- Barra do topo ---------- */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 8px 16px;
+    background: var(--madeira);
+    border-bottom: 4px solid var(--madeira-escura);
+    color: #fff8e7;
+    box-shadow: 0 3px 0 rgba(0,0,0,.15);
+  }
+  header h1 {
+    margin: 0; font-size: 20px; letter-spacing: .5px;
+    text-shadow: 2px 2px 0 var(--madeira-escura);
+    white-space: nowrap;
+  }
+  .stats { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; justify-content: center; }
+  .stat {
+    background: var(--papel); color: var(--texto);
+    border: 3px solid var(--madeira-escura); border-radius: 10px;
+    padding: 4px 10px; font-weight: bold; white-space: nowrap;
+    box-shadow: 0 3px 0 var(--madeira-escura);
+  }
+  .stat.moedas { background: #fff1b8; font-size: 20px; min-width: 150px; text-align: center; }
+  .stat small { font-weight: normal; opacity: .8; }
+  .botoes-topo { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn {
+    font: inherit; font-weight: bold; cursor: pointer;
+    border: 3px solid var(--madeira-escura); border-radius: 10px;
+    padding: 5px 10px; background: var(--papel); color: var(--texto);
+    box-shadow: 0 3px 0 var(--madeira-escura);
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--madeira-escura); }
+  .btn.perigo { background: #ffd6cf; }
+  .btn.desligado { background: #ddd2bd; color: #8a7a66; }
+  .btn.desligado .rotulo-som { text-decoration: line-through; }
+
+  /* ---------- Layout principal ---------- */
+  main {
+    display: flex; gap: 16px; align-items: flex-start;
+    max-width: 1440px; margin: 0 auto; padding: 16px;
+  }
+  .painel {
+    background: var(--papel);
+    border: 4px solid var(--madeira); border-radius: 14px;
+    box-shadow: 0 5px 0 var(--madeira-escura);
+  }
+  .fazenda-col { flex: 1.8; min-width: 0; }
+  .loja-col { flex: 1; min-width: 300px; max-width: 440px; }
+
+  .fazenda-wrap {
+    position: relative; padding: 8px; overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+  }
+  canvas#fazenda {
+    display: block; width: 100%; height: auto;
+    aspect-ratio: 400 / 260;
+    image-rendering: pixelated; image-rendering: crisp-edges;
+    border-radius: 8px; cursor: pointer;
+    touch-action: manipulation;
+  }
+  .dica { text-align: center; padding: 4px 10px 8px; font-size: 14px; }
+  .progresso { padding: 0 12px 12px; }
+  .barra {
+    height: 14px; background: var(--papel-escuro);
+    border: 2px solid var(--madeira-escura); border-radius: 8px; overflow: hidden;
+  }
+  .barra > div {
+    height: 100%; width: 0%;
+    background: repeating-linear-gradient(45deg, var(--verde) 0 8px, #6cc24a 8px 16px);
+    transition: width .4s;
+  }
+  .progresso .rotulo { font-size: 13px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+
+  .flutua {
+    position: absolute; pointer-events: none;
+    font-weight: bold; font-size: 20px; color: #ffe066;
+    text-shadow: 2px 2px 0 #7a4a12, -1px -1px 0 #7a4a12, 1px -1px 0 #7a4a12, -1px 1px 0 #7a4a12;
+    transform: translate(-50%, -50%);
+    animation: sobe .9s ease-out forwards;
+    white-space: nowrap; z-index: 5;
+  }
+  @keyframes sobe {
+    0%   { opacity: 1; transform: translate(-50%, -50%) scale(.7); }
+    20%  { transform: translate(-50%, -80%) scale(1.15); }
+    100% { opacity: 0; transform: translate(-50%, -260%) scale(1); }
+  }
+
+  /* ---------- Loja ---------- */
+  .loja-titulo { margin: 0; padding: 10px 14px 4px; font-size: 20px; }
+  .lotes { display: flex; align-items: center; gap: 4px; padding: 2px 10px 4px; font-size: 13px; font-weight: bold; }
+  .lotes span { margin-right: 2px; }
+  .lotes button {
+    font: inherit; cursor: pointer; padding: 3px 10px; border-radius: 8px; min-width: 44px;
+    border: 2px solid var(--madeira); background: #fffdf5; color: var(--texto);
+  }
+  .lotes button.ativo { background: var(--verde); border-color: var(--verde-escuro); color: #fff; }
+  .lotes.oculto { visibility: hidden; }
+  .item .preco small { font-size: 11px; opacity: .8; }
+  .item:disabled { color: inherit; }
+  .abas { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 10px; }
+  .aba {
+    position: relative; flex: 1 1 auto;
+    font: inherit; font-size: 13px; font-weight: bold; cursor: pointer;
+    padding: 6px 8px; border-radius: 8px;
+    border: 2px solid var(--madeira); background: var(--papel-escuro); color: var(--texto);
+  }
+  .aba.ativa { background: var(--madeira); color: #fff8e7; }
+  .aba .ponto {
+    position: absolute; top: -5px; right: -5px; width: 12px; height: 12px;
+    border-radius: 50%; background: #ff5a4f; border: 2px solid #fff8e7; display: none;
+  }
+  .aba .ponto.on { display: block; }
+
+  .itens { padding: 6px 10px 12px; display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 200px); overflow-y: auto; }
+  .item {
+    display: flex; align-items: center; gap: 10px; text-align: left;
+    width: 100%; font: inherit; color: inherit; cursor: pointer;
+    background: #fffdf5; border: 3px solid var(--madeira); border-radius: 10px;
+    padding: 8px 10px; box-shadow: 0 3px 0 var(--madeira-escura);
+    transition: transform .08s, background .15s;
+  }
+  .item:hover:not(.bloqueado):not(.feito):not(.caro) { background: #f2ffe6; transform: translateY(-1px); }
+  .item:active:not(.bloqueado):not(.feito):not(.caro) { transform: translateY(2px); box-shadow: 0 1px 0 var(--madeira-escura); }
+  .item .ico { font-size: 30px; width: 40px; text-align: center; flex-shrink: 0; }
+  .item .info { flex: 1; min-width: 0; }
+  .item .nome { font-weight: bold; font-size: 15px; }
+  .item .qtd {
+    display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 6px;
+    background: var(--verde); color: #fff; font-size: 12px; vertical-align: middle;
+  }
+  .item .desc { font-size: 12px; opacity: .85; margin-top: 2px; }
+  .item .efeito { font-size: 12px; color: var(--verde-escuro); font-weight: bold; margin-top: 2px; }
+  .item .preco {
+    font-weight: bold; white-space: nowrap; font-size: 14px;
+    background: #fff1b8; border: 2px solid #c99a2e; border-radius: 8px; padding: 2px 6px;
+  }
+  .item.caro { cursor: not-allowed; }
+  .item.caro .preco { background: #f3e2df; border-color: #c98a80; color: #a0453a; }
+  .item.bloqueado { cursor: not-allowed; background: #ece3cf; filter: grayscale(.7); opacity: .8; }
+  .item.bloqueado .preco { background: #ddd; border-color: #999; }
+  .item.feito { cursor: default; background: #e7f6dc; border-color: var(--verde-escuro); box-shadow: 0 3px 0 #2c5e1c; }
+  .item.feito .preco { background: var(--verde); border-color: var(--verde-escuro); color: #fff; }
+  .item.misterio .ico { filter: brightness(0); opacity: .35; }
+  .vazio { text-align: center; padding: 10px; font-weight: bold; opacity: .8; }
+  .concluidos { border: 3px dashed var(--madeira); border-radius: 10px; background: var(--papel-escuro); }
+  .concluidos summary {
+    cursor: pointer; padding: 8px 12px; font-weight: bold; list-style: none; user-select: none;
+  }
+  .concluidos summary::-webkit-details-marker { display: none; }
+  .concluidos summary::before { content: '▶ '; font-size: 11px; }
+  .concluidos[open] summary::before { content: '▼ '; }
+  .lista-concluidos { display: flex; flex-direction: column; gap: 6px; padding: 0 8px 8px; }
+  .lista-concluidos .item { padding: 4px 8px; box-shadow: none; }
+  .lista-concluidos .item .ico { font-size: 20px; width: 28px; }
+  .lista-concluidos .item .desc, .lista-concluidos .item .efeito { display: none; }
+
+  /* Contadores de animais sobre a fazenda */
+  .rotulos { position: absolute; inset: 8px; pointer-events: none; }
+  .grupo-rotulos { position: absolute; transform: translate(-50%, -50%); display: flex; gap: 3px; }
+  .rotulo-animal {
+    background: rgba(255, 248, 231, .92); color: var(--texto);
+    border: 2px solid var(--madeira-escura); border-radius: 8px;
+    padding: 0 5px; font-size: clamp(10px, 1.3vw, 14px); font-weight: bold; white-space: nowrap;
+    box-shadow: 0 2px 0 var(--madeira-escura);
+  }
+
+  /* ---------- Avisos e modal ---------- */
+  #avisos {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 6px; align-items: center; z-index: 50;
+    pointer-events: none; width: min(92vw, 520px);
+  }
+  .aviso {
+    background: var(--papel); border: 3px solid var(--madeira); border-radius: 10px;
+    padding: 8px 14px; font-weight: bold; text-align: center;
+    box-shadow: 0 3px 0 var(--madeira-escura);
+    animation: aparece .3s ease-out, some .5s ease-in 3.2s forwards;
+  }
+  .aviso.grande { background: #fff1b8; font-size: 17px; }
+  .aviso.conquista { background: linear-gradient(#fff6c8, #ffe58a); border-color: #b8860b; box-shadow: 0 3px 0 #8a6408; font-size: 16px; }
+  .aviso.conquista small { display: block; font-size: 12px; font-weight: normal; }
+
+  /* ---------- Conquistas ---------- */
+  .resumo-conquistas {
+    text-align: center; font-weight: bold; padding: 8px; border-radius: 10px;
+    background: #fff1b8; border: 2px solid #c99a2e;
+  }
+  .resumo-conquistas small { display: block; font-weight: normal; font-size: 12px; }
+  .cq {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border: 3px solid var(--madeira); border-radius: 10px; background: #ece3cf;
+  }
+  .cq .ico { font-size: 26px; width: 36px; text-align: center; flex-shrink: 0; }
+  .cq .info { flex: 1; min-width: 0; }
+  .cq .nome { font-weight: bold; font-size: 15px; }
+  .cq .desc { font-size: 12px; opacity: .85; }
+  .cq .bonus { font-weight: bold; font-size: 13px; white-space: nowrap; color: var(--verde-escuro); }
+  .cq.ok { background: linear-gradient(#fffbe6, #fff1b8); border-color: #c99a2e; box-shadow: 0 3px 0 #a07a1a; }
+  .cq.trancada .nome { opacity: .75; }
+  .cq .mini { height: 6px; margin-top: 4px; background: #d8ccb2; border-radius: 4px; overflow: hidden; }
+  .cq .mini > div { height: 100%; background: var(--verde); }
+  .cq .prog { font-size: 11px; opacity: .8; margin-top: 2px; }
+  @keyframes aparece { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes some { to { opacity: 0; transform: translateY(8px); } }
+
+  #modal {
+    position: fixed; inset: 0; background: rgba(40, 25, 10, .55);
+    display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px;
+  }
+  #modal.aberto { display: flex; }
+  #modal .caixa { max-width: 380px; padding: 20px; text-align: center; }
+  #modal h2 { margin: 0 0 8px; }
+  #modal .botoes { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+
+  @media (max-width: 900px) {
+    main { flex-direction: column; padding: 10px; }
+    .loja-col { max-width: none; width: 100%; min-width: 0; }
+    .itens { max-height: none; }
+    header { padding: 8px 10px; }
+    header h1 { font-size: 17px; }
+    .stat.moedas { font-size: 17px; min-width: 0; }
+    .btn { padding: 4px 8px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌻 Fazendinha Renascida</h1>
+  <div class="stats">
+    <div class="stat moedas">🪙 <span id="moedas">0</span></div>
+    <div class="stat">👆 <span id="porClique">1</span> <small>por clique</small></div>
+    <div class="stat">⏱️ <span id="porSegundo">0</span> <small>por segundo</small></div>
+  </div>
+  <div class="botoes-topo">
+    <button class="btn" id="btnMusica" title="Ligar/desligar a música">🎵 <span class="rotulo-som">Música</span></button>
+    <button class="btn" id="btnEfeitos" title="Ligar/desligar os efeitos sonoros">🔊 <span class="rotulo-som">Efeitos</span></button>
+    <button class="btn perigo" id="btnReiniciar">🔄 Reiniciar</button>
+  </div>
+</header>
+
+<main>
+  <section class="fazenda-col painel">
+    <div class="fazenda-wrap" id="fazendaWrap">
+      <canvas id="fazenda" width="400" height="260"></canvas>
+      <div class="rotulos" id="rotulos"></div>
+    </div>
+    <div class="dica" id="dica">👆 Clique na fazenda para ganhar moedas e começar a reconstrução!</div>
+    <div class="progresso">
+      <div class="rotulo"><span>🏡 Reconstrução da fazenda</span><span id="progTxt">0%</span></div>
+      <div class="barra"><div id="progBarra"></div></div>
+    </div>
+  </section>
+
+  <section class="loja-col painel">
+    <h2 class="loja-titulo">🛒 Loja</h2>
+    <div class="lotes" id="lotes">
+      <span>Comprar:</span>
+      <button data-lote="1">1x</button><button data-lote="5">5x</button><button data-lote="10">10x</button><button data-lote="max">Máx</button>
+    </div>
+    <div class="abas" id="abas"></div>
+    <div class="itens" id="itens"></div>
+  </section>
+</main>
+
+<div id="avisos"></div>
+
+<div id="modal">
+  <div class="caixa painel">
+    <h2>🔄 Reiniciar o jogo?</h2>
+    <p>Todo o progresso será perdido e a fazenda voltará a ficar abandonada. Tem certeza?</p>
+    <div class="botoes">
+      <button class="btn" id="btnCancelar">Cancelar</button>
+      <button class="btn perigo" id="btnConfirmar">Sim, recomeçar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// =====================================================================
+// DADOS DOS ITENS DA LOJA
+// =====================================================================
+// req: lista de [idDoItem, quantidadeMínima] necessários para liberar.
+// multPlantas / multAnimais / multTrigoMilho / multClique: multiplicadores de itens únicos.
+const CATEGORIAS = [
+  { id: 'limpeza',     nome: '🧹 Limpeza e reparos' },
+  { id: 'ferramentas', nome: '🧰 Ferramentas' },
+  { id: 'plantacoes',  nome: '🌱 Plantações' },
+  { id: 'animais',     nome: '🐾 Animais' },
+  { id: 'construcoes', nome: '🔨 Construções' },
+  { id: 'conquistas',  nome: '🏆 Conquistas' },
+];
+
+const ITENS = [
+  // ---- Limpeza e reparos (compra única) ----
+  { id: 'mato', cat: 'limpeza', nome: 'Arrancar o mato', ico: '🌿', custo: 15, unico: true,
+    desc: 'Tira as ervas daninhas que tomaram conta da sede da fazenda.',
+    msg: 'Mato arrancado! Já dá pra ver o chão.' },
+  { id: 'pedras', cat: 'limpeza', nome: 'Tirar as pedras', ico: '🪨', custo: 60, unico: true, req: [['mato', 1]],
+    desc: 'Remove as pedras espalhadas. Agora dá para plantar!',
+    msg: 'Pedras removidas! O terreno está pronto para canteiros.' },
+  { id: 'lixo', cat: 'limpeza', nome: 'Recolher lixo e galhos', ico: '🗑️', custo: 180, unico: true, req: [['pedras', 1]],
+    desc: 'Junta latas, papéis, garrafas, pneus e galhos secos.',
+    msg: 'Lixo recolhido! A fazenda está bem mais bonita.' },
+  { id: 'cerca', cat: 'limpeza', nome: 'Consertar a cerca', ico: '🪵', custo: 450, unico: true, req: [['lixo', 1]],
+    desc: 'Arruma toda a cerca quebrada em volta da fazenda.',
+    msg: 'Cerca consertada! A sede está ficando linda.' },
+  { id: 'galinheiro', cat: 'limpeza', nome: 'Reconstruir o galinheiro', ico: '🛖', custo: 900, unico: true, req: [['cerca', 1]],
+    desc: 'O galinheiro está destruído. Reconstrua para criar galinhas.',
+    msg: 'Galinheiro novinho! Já dá para criar galinhas.' },
+  { id: 'ponte', cat: 'limpeza', nome: 'Consertar a ponte caída', ico: '🌉', custo: 2500, unico: true, req: [['cerca', 1]],
+    desc: 'Libera o lado oeste da fazenda, do outro lado do riacho.',
+    msg: 'Ponte consertada! O lado oeste da fazenda foi liberado.', grande: true },
+  { id: 'entulho', cat: 'limpeza', nome: 'Retirar o entulho', ico: '🧱', custo: 6000, unico: true, req: [['ponte', 1]],
+    desc: 'Tijolos, tábuas e barris velhos ocupam o terreno do oeste.',
+    msg: 'Entulho retirado! Um bom lugar para um pomar.' },
+  { id: 'lago', cat: 'limpeza', nome: 'Limpar o lago sujo', ico: '🏞️', custo: 9000, unico: true, req: [['ponte', 1]],
+    desc: 'Tira o lodo e o lixo do lago. Os patos vão adorar.',
+    msg: 'O lago está limpinho e brilhando!' },
+  { id: 'estufa', cat: 'limpeza', nome: 'Consertar a estufa quebrada', ico: '🪟', custo: 30000, unico: true, req: [['entulho', 1]],
+    desc: 'Troca os vidros quebrados e arranca as trepadeiras.',
+    msg: 'Estufa consertada! Perfeita para morangos.' },
+  { id: 'mata', cat: 'limpeza', nome: 'Desbravar a mata fechada', ico: '🌲', custo: 45000, unico: true, req: [['entulho', 1], ['lago', 1]],
+    desc: 'Abre caminho na mata do leste e monta um grande pasto.',
+    msg: 'Mata desbravada! Um pasto enorme surgiu no leste.', grande: true },
+
+  // ---- Ferramentas (melhoram o clique) ----
+  { id: 'luvas', cat: 'ferramentas', nome: 'Luvas de trabalho', ico: '🧤', custo: 25, unico: true, clique: 1,
+    desc: 'Protegem as mãos para trabalhar mais rápido.', msg: 'Luvas novinhas!' },
+  { id: 'enxada', cat: 'ferramentas', nome: 'Enxada melhor', ico: '⛏️', custo: 200, unico: true, clique: 3, req: [['mato', 1]],
+    desc: 'Uma enxada afiada rende muito mais trabalho.', msg: 'Enxada nova em folha!' },
+  { id: 'regador', cat: 'ferramentas', nome: 'Regador grande', ico: '💧', custo: 1500, unico: true, clique: 8, req: [['poco', 1]],
+    desc: 'Com água do poço, cada clique vale mais.', msg: 'Regador cheinho de água!' },
+  { id: 'foice', cat: 'ferramentas', nome: 'Foice afiada', ico: '🌾', custo: 6000, unico: true, clique: 25, req: [['trigo', 1]],
+    desc: 'Colhe o trigo num piscar de olhos.', msg: 'Foice afiadinha!' },
+  { id: 'carrinho', cat: 'ferramentas', nome: 'Carrinho de mão', ico: '🛒', custo: 25000, unico: true, clique: 80, req: [['entulho', 1]],
+    desc: 'Carrega tudo de uma vez só.', msg: 'Carrinho de mão pronto para o trabalho!' },
+  { id: 'chapeu', cat: 'ferramentas', nome: 'Chapéu de palha da sorte', ico: '👒', custo: 60000, unico: true, cliquePct: 0.02, req: [['lago', 1]],
+    desc: 'Dá sorte! Cada clique também rende 2% das moedas por segundo.', msg: 'Que chapéu charmoso!' },
+  { id: 'trator', cat: 'ferramentas', nome: 'Consertar o trator velho', ico: '🚜', custo: 200000, unico: true, clique: 300, multPlantas: 1.25, req: [['mata', 1]],
+    desc: 'O trator enferrujado volta a funcionar! Também dá +25% nas plantações.', msg: 'Vrum vrum! O trator está funcionando!' },
+
+  // ---- Plantações (repetíveis) ----
+  { id: 'cenoura', cat: 'plantacoes', nome: 'Canteiro de cenoura', ico: '🥕', custo: 20, porSeg: 1, req: [['pedras', 1]],
+    desc: 'Cenourinhas crocantes que crescem rapidinho.', msg: 'Um canteiro de cenoura foi plantado!' },
+  { id: 'trigo', cat: 'plantacoes', nome: 'Plantação de trigo', ico: '🌾', custo: 120, porSeg: 5, req: [['lixo', 1]],
+    desc: 'Trigo dourado balançando ao vento.', msg: 'Trigo plantado!' },
+  { id: 'milho', cat: 'plantacoes', nome: 'Milharal', ico: '🌽', custo: 650, porSeg: 22, req: [['cerca', 1], ['trigo', 1]],
+    desc: 'Pés de milho altos e bem amarelinhos.', msg: 'Pés de milho plantados!' },
+  { id: 'abobora', cat: 'plantacoes', nome: 'Canteiro de abóbora', ico: '🎃', custo: 3200, porSeg: 90, req: [['poco', 1], ['milho', 1]],
+    desc: 'Abóboras gordinhas e alaranjadas.', msg: 'Abóboras plantadas!' },
+  { id: 'pomar', cat: 'plantacoes', nome: 'Macieira do pomar', ico: '🍎', custo: 20000, porSeg: 480, req: [['entulho', 1]],
+    desc: 'Árvores carregadas de maçãs vermelhas.', msg: 'Uma macieira nova no pomar!' },
+  { id: 'morango', cat: 'plantacoes', nome: 'Morangos da estufa', ico: '🍓', custo: 75000, porSeg: 1600, req: [['estufa', 1]],
+    desc: 'Morangos docinhos cultivados na estufa.', msg: 'Morangos plantados na estufa!' },
+
+  // ---- Animais (repetíveis) ----
+  { id: 'galinha', cat: 'animais', nome: 'Galinha', ico: '🐔', custo: 400, porSeg: 12, req: [['galinheiro', 1]], som: 'galinha',
+    desc: 'Bota ovos fresquinhos todos os dias.', msg: 'Có-có-có! Chegou uma galinha!' },
+  { id: 'pato', cat: 'animais', nome: 'Pato', ico: '🦆', custo: 3500, porSeg: 90, req: [['lago', 1]], som: 'pato',
+    desc: 'Nada feliz no lago e bota ovos grandes.', msg: 'Quá-quá! Um pato chegou ao lago!' },
+  { id: 'porco', cat: 'animais', nome: 'Porco', ico: '🐷', custo: 14000, porSeg: 300, req: [['mata', 1]], som: 'porco',
+    desc: 'Adora rolar na lama do pasto.', msg: 'Oinc oinc! Chegou um porquinho!' },
+  { id: 'ovelha', cat: 'animais', nome: 'Ovelha', ico: '🐑', custo: 45000, porSeg: 850, req: [['mata', 1], ['porco', 1]], som: 'ovelha',
+    desc: 'Lã macia que vale um bom dinheiro.', msg: 'Méééé! Uma ovelha chegou!' },
+  { id: 'vaca', cat: 'animais', nome: 'Vaca', ico: '🐄', custo: 140000, porSeg: 2500, req: [['celeiro', 1]], som: 'vaca',
+    desc: 'Leite fresquinho direto do celeiro.', msg: 'Muuuu! Uma vaca chegou!' },
+
+  // ---- Construções (compra única) ----
+  { id: 'poco', cat: 'construcoes', nome: 'Poço', ico: '🪣', custo: 700, unico: true, porSeg: 5, multPlantas: 1.5, req: [['pedras', 1]],
+    desc: 'Água fresca: +50% na produção das plantações.', msg: 'Poço construído! As plantas agradecem.' },
+  { id: 'espantalho', cat: 'construcoes', nome: 'Espantalho', ico: '🧑‍🌾', custo: 3500, unico: true, multPlantas: 1.25, req: [['trigo', 1]],
+    desc: 'Espanta os passarinhos: +25% nas plantações.', msg: 'O espantalho já está de guarda!' },
+  { id: 'moinho', cat: 'construcoes', nome: 'Moinho de vento', ico: '🌬️', custo: 25000, unico: true, porSeg: 60, multTrigoMilho: 2, req: [['milho', 3]],
+    desc: 'Mói os grãos: dobra a produção de trigo e milho.', msg: 'O moinho começou a girar!' },
+  { id: 'celeiro', cat: 'construcoes', nome: 'Celeiro', ico: '🏠', custo: 60000, unico: true, porSeg: 100, multAnimais: 1.5, req: [['mata', 1]],
+    desc: 'Abriga os animais (+50% na produção deles) e libera vacas.', msg: 'Celeiro vermelhinho erguido!' },
+  { id: 'colmeia', cat: 'construcoes', nome: 'Colmeias', ico: '🐝', custo: 100000, unico: true, porSeg: 150, multPlantas: 1.5, req: [['mata', 1], ['pomar', 1]],
+    desc: 'As abelhas polinizam tudo: +50% nas plantações.', msg: 'Bzzz! As abelhas chegaram!' },
+  { id: 'casa', cat: 'construcoes', nome: 'Reformar a casa', ico: '🏡', custo: 300000, unico: true, porSeg: 1000, multClique: 2, req: [['celeiro', 1]],
+    desc: 'A casinha velha volta a brilhar. Dobra as moedas por clique!', msg: 'Casa reformada! Lar, doce lar.', grande: true },
+];
+const ITEM = Object.fromEntries(ITENS.map(i => [i.id, i]));
+const CRESCIMENTO = 1.15; // cada compra de item repetível fica 15% mais cara
+
+// =====================================================================
+// ESTADO E SALVAMENTO
+// =====================================================================
+const CHAVE_SAVE = 'fazendinha-renascida-v1';
+const CHAVE_CONFIG = 'fazendinha-renascida-config';
+const novoEstado = () => ({ moedas: 0, itens: {}, cliques: 0, ganhoTotal: 0, tempoJogo: 0, conquistas: {}, salvoEm: Date.now() });
+let estado = novoEstado();
+let config = { musica: true, efeitos: true, lote: 1 };
+
+function carregar() {
+  try {
+    const bruto = localStorage.getItem(CHAVE_SAVE);
+    if (bruto) {
+      const dados = JSON.parse(bruto);
+      estado = Object.assign(novoEstado(), dados);
+      estado.itens = estado.itens || {};
+      estado.conquistas = estado.conquistas || {};
+      // saves de versões antigas não tinham o total ganho: começa pelo saldo atual
+      if (dados.ganhoTotal === undefined) estado.ganhoTotal = estado.moedas;
+    }
+  } catch (e) { estado = novoEstado(); }
+  try { Object.assign(config, JSON.parse(localStorage.getItem(CHAVE_CONFIG) || '{}')); } catch (e) {}
+  migrarSave();
+}
+// Saves antigos: se o jogador já tem um item cujos novos requisitos
+// (ex.: galinheiro, ponte) ainda não existiam, libera esses requisitos.
+function migrarSave() {
+  let mudou = true;
+  while (mudou) {
+    mudou = false;
+    for (const item of ITENS) {
+      if (!qtd(item.id) || !item.req) continue;
+      for (const [id, n] of item.req) {
+        if (ITEM[id].unico && qtd(id) < n) { estado.itens[id] = n; mudou = true; }
+      }
+    }
+  }
+}
+function salvar() {
+  estado.salvoEm = Date.now();
+  try { localStorage.setItem(CHAVE_SAVE, JSON.stringify(estado)); } catch (e) {}
+}
+function salvarConfig() {
+  try { localStorage.setItem(CHAVE_CONFIG, JSON.stringify(config)); } catch (e) {}
+}
+
+const qtd = id => estado.itens[id] || 0;
+const tem = id => qtd(id) > 0;
+
+function custoDe(item) {
+  return item.unico ? item.custo : Math.floor(item.custo * Math.pow(CRESCIMENTO, qtd(item.id)));
+}
+// Custo exato das próximas n unidades (cada compra fica mais cara)
+function custoLote(item, n) {
+  if (item.unico) return item.custo;
+  const k = qtd(item.id);
+  let total = 0;
+  for (let i = 0; i < n; i++) total += Math.floor(item.custo * Math.pow(CRESCIMENTO, k + i));
+  return total;
+}
+// Quantas unidades as moedas atuais conseguem pagar
+function maxAcessivel(item) {
+  if (item.unico) return estado.moedas >= item.custo ? 1 : 0;
+  const r = CRESCIMENTO, base = item.custo * Math.pow(r, qtd(item.id));
+  if (!(estado.moedas >= Math.floor(base))) return 0;
+  // fórmula da soma geométrica, depois ajuste fino por causa dos arredondamentos
+  let n = Math.floor(Math.log(estado.moedas * (r - 1) / base + 1) / Math.log(r));
+  n = Math.max(1, Math.min(n, 5000));
+  while (n > 1 && custoLote(item, n) > estado.moedas) n--;
+  while (n < 5000 && custoLote(item, n + 1) <= estado.moedas) n++;
+  return n;
+}
+// Quantidade que um clique na loja vai comprar, conforme o seletor 1x/5x/10x/Máx
+function loteDe(item) {
+  if (item.unico) return 1;
+  if (config.lote === 'max') return Math.max(1, maxAcessivel(item));
+  return config.lote;
+}
+function liberado(item) {
+  return !item.req || item.req.every(([id, n]) => qtd(id) >= n);
+}
+function visivel(item) {
+  return !item.req || item.req.every(([id]) => liberado(ITEM[id]));
+}
+function multiplicador(campo) {
+  let m = 1;
+  for (const it of ITENS) if (it[campo] && tem(it.id)) m *= it[campo];
+  return m;
+}
+function moedasPorSegundo() {
+  return producaoBase() * bonusConquistas();
+}
+function producaoBase() {
+  const mp = multiplicador('multPlantas'), ma = multiplicador('multAnimais'), mtm = multiplicador('multTrigoMilho');
+  let total = 0;
+  for (const it of ITENS) {
+    if (!it.porSeg) continue;
+    let v = it.porSeg * qtd(it.id);
+    if (it.cat === 'plantacoes') v *= mp;
+    if (it.id === 'trigo' || it.id === 'milho') v *= mtm;
+    if (it.cat === 'animais') v *= ma;
+    total += v;
+  }
+  return total;
+}
+function moedasPorClique() {
+  let base = 1, pct = 0;
+  for (const it of ITENS) {
+    if (it.clique) base += it.clique * qtd(it.id);
+    if (it.cliquePct && tem(it.id)) pct += it.cliquePct;
+  }
+  return Math.floor(base * multiplicador('multClique') + moedasPorSegundo() * pct);
+}
+function ganhar(v) { estado.moedas += v; estado.ganhoTotal += v; }
+
+// =====================================================================
+// CONQUISTAS
+// =====================================================================
+// prog() devolve [atual, alvo]; a conquista é desbloqueada quando atual >= alvo.
+// bonus: % a mais de moedas por segundo (somado entre todas as conquistas).
+const contar = ids => ids.filter(tem).length;
+const somaCat = cat => ITENS.filter(i => i.cat === cat).reduce((s, i) => s + qtd(i.id), 0);
+const tiposCat = cat => ITENS.filter(i => i.cat === cat && tem(i.id)).length;
+const totalCat = cat => ITENS.filter(i => i.cat === cat).length;
+const UNICOS = ITENS.filter(i => i.unico);
+function fmtTempo(seg) {
+  const h = Math.floor(seg / 3600), m = Math.floor(seg % 3600 / 60);
+  return h ? `${h}h ${String(m).padStart(2, '0')}min` : `${m} min`;
+}
+const CONQUISTAS = [
+  { id: 'clique1', nome: 'Primeiro clique', ico: '👆', desc: 'Clique na fazenda pela primeira vez.', bonus: 1, prog: () => [estado.cliques, 1] },
+  { id: 'clique100', nome: 'Dedos calejados', ico: '💪', desc: 'Clique 100 vezes na fazenda.', bonus: 1, prog: () => [estado.cliques, 100] },
+  { id: 'clique1000', nome: 'Mão de obra', ico: '🖐️', desc: 'Clique 1.000 vezes na fazenda.', bonus: 1, prog: () => [estado.cliques, 1000] },
+  { id: 'clique10000', nome: 'Clique incansável', ico: '⚡', desc: 'Clique 10.000 vezes na fazenda.', bonus: 2, prog: () => [estado.cliques, 10000] },
+  { id: 'ganho1k', nome: 'Primeiras economias', ico: '🪙', desc: 'Ganhe 1.000 moedas no total.', bonus: 1, prog: () => [estado.ganhoTotal, 1e3] },
+  { id: 'ganho1m', nome: 'Milionário da roça', ico: '💰', desc: 'Ganhe 1 milhão de moedas no total.', bonus: 2, prog: () => [estado.ganhoTotal, 1e6] },
+  { id: 'ganho1b', nome: 'Bilionário da roça', ico: '🏦', desc: 'Ganhe 1 bilhão de moedas no total.', bonus: 3, prog: () => [estado.ganhoTotal, 1e9] },
+  { id: 'seg100', nome: 'Fazenda produtiva', ico: '⏱️', desc: 'Produza 100 moedas por segundo.', bonus: 1, prog: () => [moedasPorSegundo(), 100] },
+  { id: 'seg10k', nome: 'Agronegócio', ico: '📈', desc: 'Produza 10.000 moedas por segundo.', bonus: 2, prog: () => [moedasPorSegundo(), 1e4] },
+  { id: 'cenoura1', nome: 'Primeira colheita', ico: '🥕', desc: 'Plante o primeiro canteiro de cenoura.', bonus: 1, prog: () => [qtd('cenoura'), 1] },
+  { id: 'plantas100', nome: 'Mão verde', ico: '🌱', desc: 'Tenha 100 plantações no total.', bonus: 1, prog: () => [somaCat('plantacoes'), 100] },
+  { id: 'todasPlantas', nome: 'Horta completa', ico: '🧺', desc: 'Tenha pelo menos uma de cada plantação.', bonus: 2, prog: () => [tiposCat('plantacoes'), totalCat('plantacoes')] },
+  { id: 'galinha1', nome: 'Primeira galinha', ico: '🐔', desc: 'Compre sua primeira galinha.', bonus: 1, prog: () => [qtd('galinha'), 1] },
+  { id: 'galinha10', nome: 'Galinheiro animado', ico: '🐣', desc: 'Tenha 10 galinhas.', bonus: 1, prog: () => [qtd('galinha'), 10] },
+  { id: 'galinha100', nome: 'Granja de respeito', ico: '🥚', desc: 'Tenha 100 galinhas.', bonus: 2, prog: () => [qtd('galinha'), 100] },
+  { id: 'vaca1', nome: 'Muuuito bem!', ico: '🐄', desc: 'Compre sua primeira vaca.', bonus: 1, prog: () => [qtd('vaca'), 1] },
+  { id: 'arca', nome: 'Arca de Noé', ico: '🚢', desc: 'Tenha pelo menos um de cada animal.', bonus: 2, prog: () => [tiposCat('animais'), totalCat('animais')] },
+  { id: 'sede', nome: 'Casa arrumada', ico: '🧹', desc: 'Limpe a sede: mato, pedras, lixo e cerca.', bonus: 1, prog: () => [contar(['mato', 'pedras', 'lixo', 'cerca']), 4] },
+  { id: 'limpeza', nome: 'Fazenda limpinha', ico: '✨', desc: 'Conclua todas as limpezas e reparos da fazenda.', bonus: 3, prog: () => [tiposCat('limpeza'), totalCat('limpeza')] },
+  { id: 'ferramentas', nome: 'Caixa de ferramentas', ico: '🧰', desc: 'Tenha todas as ferramentas.', bonus: 2, prog: () => [tiposCat('ferramentas'), totalCat('ferramentas')] },
+  { id: 'casa', nome: 'Lar, doce lar', ico: '🏡', desc: 'Reforme a casa da fazenda.', bonus: 2, prog: () => [qtd('casa'), 1] },
+  { id: 'renascida', nome: 'Fazenda renascida', ico: '🌻', desc: 'Reconstrua 100% da fazenda.', bonus: 5, prog: () => [UNICOS.filter(i => tem(i.id)).length, UNICOS.length] },
+  { id: 'tempo10m', nome: 'Pegando o jeito', ico: '⏳', desc: 'Jogue por 10 minutos.', bonus: 1, prog: () => [estado.tempoJogo, 600], tempo: true },
+  { id: 'tempo1h', nome: 'Fazendeiro dedicado', ico: '⌛', desc: 'Jogue por 1 hora.', bonus: 2, prog: () => [estado.tempoJogo, 3600], tempo: true },
+  { id: 'tempo5h', nome: 'Vida no campo', ico: '🌄', desc: 'Jogue por 5 horas.', bonus: 3, prog: () => [estado.tempoJogo, 18000], tempo: true },
+];
+const temConquista = id => !!estado.conquistas[id];
+function bonusConquistas() {
+  let pct = 0;
+  for (const cq of CONQUISTAS) if (temConquista(cq.id)) pct += cq.bonus;
+  return 1 + pct / 100;
+}
+
+// =====================================================================
+// FORMATAÇÃO DE NÚMEROS
+// =====================================================================
+function fmt(n) {
+  if (!isFinite(n)) return '∞';
+  if (n < 1e6) return Math.floor(n).toLocaleString('pt-BR');
+  if (n >= 1e36) return n.toExponential(2).replace('.', ',').replace('e+', 'e');
+  const unidades = [[1e33, 'dec'], [1e30, 'non'], [1e27, 'oct'], [1e24, 'sept'], [1e21, 'sext'], [1e18, 'quint'],
+    [1e15, 'quatri'], [1e12, 'tri'], [1e9, 'bi'], [1e6, 'mi']];
+  for (const [v, s] of unidades) {
+    if (n >= v) return (n / v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + s;
+  }
+}
+function fmtTaxa(n) {
+  if (n < 1000 && n % 1 !== 0) return n.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+  return fmt(n);
+}
+
+// =====================================================================
+// SOM (tudo gerado com Web Audio, sem arquivos)
+// =====================================================================
+const Som = {
+  ctx: null, sfx: null, mus: null, eco: null, ruidoBuf: null,
+
+  iniciar() {
+    if (this.ctx) { if (this.ctx.state === 'suspended' && !document.hidden) this.ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = this.ctx = new AC();
+    const comp = ctx.createDynamicsCompressor();
+    comp.connect(ctx.destination);
+    const master = ctx.createGain(); master.gain.value = 0.9; master.connect(comp);
+    this.sfx = ctx.createGain(); this.sfx.gain.value = config.efeitos ? 0.6 : 0; this.sfx.connect(master);
+    this.mus = ctx.createGain(); this.mus.gain.value = config.musica ? 0.5 : 0; this.mus.connect(master);
+    // eco suave para a melodia
+    this.eco = ctx.createDelay(1); this.eco.delayTime.value = Musica.passo * 1.5;
+    const retorno = ctx.createGain(); retorno.gain.value = 0.3;
+    const filtro = ctx.createBiquadFilter(); filtro.type = 'lowpass'; filtro.frequency.value = 2200;
+    const molhado = ctx.createGain(); molhado.gain.value = 0.35;
+    this.eco.connect(filtro); filtro.connect(retorno); retorno.connect(this.eco);
+    filtro.connect(molhado); molhado.connect(this.mus);
+    // ruído branco reaproveitável
+    this.ruidoBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const d = this.ruidoBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    if (config.musica) Musica.iniciar();
+  },
+
+  ajustar() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.sfx.gain.setTargetAtTime(config.efeitos ? 0.6 : 0, t, 0.05);
+    this.mus.gain.setTargetAtTime(config.musica ? 0.5 : 0, t, 0.3);
+    if (config.musica) Musica.iniciar(); else Musica.parar();
+  },
+
+  // Um tom com envelope. Opções: tipo, vol, ataque, ate (frequência final),
+  // destino, filtro {tipo, freq, q}, vibrato {taxa, prof}, eco
+  tom(freq, quando, dur, o = {}) {
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    osc.type = o.tipo || 'sine';
+    osc.frequency.setValueAtTime(freq, quando);
+    if (o.ate) osc.frequency.exponentialRampToValueAtTime(o.ate, quando + dur);
+    if (o.detune) osc.detune.value = o.detune;
+    const g = ctx.createGain();
+    const ataque = o.ataque || 0.005, vol = o.vol || 0.2;
+    g.gain.setValueAtTime(0.0001, quando);
+    g.gain.linearRampToValueAtTime(vol, quando + ataque);
+    g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
+    let saida = g;
+    osc.connect(g);
+    if (o.filtro) {
+      const f = ctx.createBiquadFilter();
+      f.type = o.filtro.tipo; f.frequency.value = o.filtro.freq; f.Q.value = o.filtro.q || 1;
+      g.connect(f); saida = f;
+    }
+    if (o.vibrato) {
+      const lfo = ctx.createOscillator(), lg = ctx.createGain();
+      lfo.frequency.value = o.vibrato.taxa; lg.gain.value = o.vibrato.prof;
+      lfo.connect(lg); lg.connect(osc.frequency);
+      lfo.start(quando); lfo.stop(quando + dur + 0.05);
+    }
+    saida.connect(o.destino || this.sfx);
+    if (o.eco) saida.connect(this.eco);
+    osc.start(quando); osc.stop(quando + dur + 0.05);
+  },
+
+  ruido(quando, dur, o = {}) {
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource(); src.buffer = this.ruidoBuf;
+    const f = ctx.createBiquadFilter();
+    f.type = o.filtro || 'bandpass'; f.frequency.setValueAtTime(o.freq || 1000, quando); f.Q.value = o.q || 1;
+    if (o.ate) f.frequency.exponentialRampToValueAtTime(o.ate, quando + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, quando);
+    g.gain.linearRampToValueAtTime(o.vol || 0.2, quando + (o.ataque || 0.01));
+    g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
+    src.connect(f); f.connect(g); g.connect(o.destino || this.sfx);
+    src.start(quando, Math.random() * 0.5); src.stop(quando + dur + 0.05);
+  },
+
+  pronto(tipo) { return this.ctx && this.ctx.state === 'running' && (tipo === 'musica' ? config.musica : config.efeitos); },
+
+  // ---------- efeitos ----------
+  clique() {
+    if (!this.pronto()) return;
+    const t = this.ctx.currentTime, f = 600 + Math.random() * 160;
+    this.tom(f, t, 0.09, { tipo: 'triangle', vol: 0.12, ate: f * 1.6 });
+    this.tom(f * 2, t + 0.01, 0.05, { vol: 0.03 });
+  },
+  compra() {
+    if (!this.pronto()) return;
+    const t = this.ctx.currentTime;
+    [1046.5, 1318.5, 1568].forEach((f, i) => {
+      this.tom(f, t + i * 0.07, 0.35, { vol: 0.12 });
+      this.tom(f * 2, t + i * 0.07, 0.15, { tipo: 'triangle', vol: 0.03 });
+    });
+  },
+  limpeza() {
+    if (!this.pronto()) return;
+    const t = this.ctx.currentTime;
+    this.ruido(t, 0.45, { freq: 600, ate: 3500, q: 1.2, vol: 0.25, ataque: 0.05 });
+    this.ruido(t + 0.15, 0.35, { freq: 2500, ate: 900, q: 1.5, vol: 0.15, ataque: 0.04 });
+    [1318.5, 1568, 2093].forEach((f, i) => this.tom(f, t + 0.3 + i * 0.06, 0.4, { vol: 0.09 }));
+  },
+  fanfarra() {
+    if (!this.pronto()) return;
+    const t = this.ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+      this.tom(f, t + i * 0.12, 0.5, { tipo: 'triangle', vol: 0.14 });
+      this.tom(f / 2, t + i * 0.12, 0.5, { vol: 0.06 });
+    });
+    this.tom(1318.5, t + 0.5, 0.9, { vol: 0.1 });
+    this.tom(1046.5, t + 0.5, 0.9, { tipo: 'triangle', vol: 0.08 });
+  },
+  conquista() {
+    if (!this.pronto()) return;
+    const t = this.ctx.currentTime;
+    [783.99, 1046.5, 1318.5, 1568, 2093].forEach((f, i) => {
+      this.tom(f, t + i * 0.08, 0.5, { tipo: 'triangle', vol: 0.11 });
+      this.tom(f * 2, t + i * 0.08, 0.25, { vol: 0.025 });
+    });
+    for (const f of [1046.5, 1318.5, 1568]) this.tom(f, t + 0.45, 1.2, { vol: 0.07, ataque: 0.02 });
+    for (let i = 0; i < 6; i++) this.tom(3000 + Math.random() * 2500, t + 0.5 + i * 0.07, 0.12, { vol: 0.025 });
+  },
+  erro() {
+    if (!this.pronto()) return;
+    const t = this.ctx.currentTime;
+    this.tom(240, t, 0.16, { tipo: 'square', vol: 0.05, ate: 170, filtro: { tipo: 'lowpass', freq: 1200 } });
+  },
+  passarinho(vol = 0.05) {
+    if (!this.pronto()) return;
+    const t = this.ctx.currentTime, base = 2600 + Math.random() * 900, n = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) this.tom(base, t + i * 0.11, 0.08, { vol, ate: base * 1.35 });
+  },
+  animal(tipo, vol = 1) {
+    if (!this.pronto()) return;
+    const t = this.ctx.currentTime;
+    if (tipo === 'galinha') {
+      for (let i = 0; i < 3; i++) this.tom(700 + Math.random() * 80, t + i * 0.1, 0.07, { tipo: 'sawtooth', vol: 0.08 * vol, ate: 950, filtro: { tipo: 'bandpass', freq: 1400, q: 2 } });
+      this.tom(650, t + 0.32, 0.22, { tipo: 'sawtooth', vol: 0.09 * vol, ate: 900, filtro: { tipo: 'bandpass', freq: 1300, q: 2 } });
+    } else if (tipo === 'pato') {
+      for (let i = 0; i < 2; i++) this.tom(420, t + i * 0.2, 0.15, { tipo: 'sawtooth', vol: 0.14 * vol, ate: 260, filtro: { tipo: 'bandpass', freq: 1100, q: 3 } });
+    } else if (tipo === 'porco') {
+      for (let i = 0; i < 2; i++) {
+        this.tom(200, t + i * 0.22, 0.17, { tipo: 'square', vol: 0.1 * vol, ate: 130, filtro: { tipo: 'lowpass', freq: 800 } });
+        this.ruido(t + i * 0.22, 0.15, { freq: 400, q: 2, vol: 0.08 * vol });
+      }
+    } else if (tipo === 'ovelha') {
+      this.tom(470, t, 0.6, { tipo: 'sawtooth', vol: 0.1 * vol, ate: 430, vibrato: { taxa: 16, prof: 28 }, filtro: { tipo: 'bandpass', freq: 1500, q: 1.5 }, ataque: 0.04 });
+    } else if (tipo === 'vaca') {
+      this.tom(150, t, 1.1, { tipo: 'sawtooth', vol: 0.16 * vol, ate: 105, filtro: { tipo: 'lowpass', freq: 650 }, ataque: 0.15, vibrato: { taxa: 4, prof: 3 } });
+    }
+  },
+};
+
+// ---------- Música de fundo gerada (lo-fi aconchegante) ----------
+const midi = n => 440 * Math.pow(2, (n - 69) / 12);
+const Musica = {
+  passo: 60 / 76 / 2,        // colcheia a 76 BPM
+  tocando: false, n: 0, proximo: 0, timer: null, nota: 3,
+  acordes: [[53, 57, 60, 64], [52, 55, 59, 62], [50, 53, 57, 60], [48, 52, 55, 59]], // Fmaj7 Em7 Dm7 Cmaj7
+  escala: [67, 69, 72, 74, 76, 79, 81, 84],
+
+  iniciar() {
+    if (!Som.ctx || this.tocando) return;
+    this.tocando = true;
+    this.proximo = Som.ctx.currentTime + 0.15;
+    this.timer = setInterval(() => this.agendar(), 100);
+  },
+  parar() { this.tocando = false; clearInterval(this.timer); },
+  agendar() {
+    const ctx = Som.ctx;
+    if (ctx.state !== 'running') return;
+    if (this.proximo < ctx.currentTime - 0.1) this.proximo = ctx.currentTime + 0.05;
+    while (this.proximo < ctx.currentTime + 0.4) {
+      this.tocarPasso(this.n, this.proximo);
+      this.proximo += this.passo; this.n++;
+    }
+  },
+  tocarPasso(n, t) {
+    const compasso = Math.floor(n / 8), dentro = n % 8;
+    const acorde = this.acordes[compasso % 4];
+    const dest = Som.mus;
+    if (dentro === 0) {
+      for (const nt of acorde) {
+        Som.tom(midi(nt), t, this.passo * 8.6, { vol: 0.03, ataque: 0.7, destino: dest });
+        Som.tom(midi(nt + 12), t, this.passo * 8.6, { vol: 0.008, ataque: 0.9, detune: 7, tipo: 'triangle', destino: dest });
+      }
+    }
+    if (dentro === 0 || dentro === 4) {
+      const nt = (dentro === 0 ? acorde[0] : acorde[2]) - 12;
+      Som.tom(midi(nt), t, this.passo * 3.6, { tipo: 'triangle', vol: 0.1, ataque: 0.02, destino: dest });
+    }
+    if (dentro % 2 === 1) Som.ruido(t, 0.05, { filtro: 'highpass', freq: 7000, vol: 0.012, destino: dest });
+
+    // melodia de caixinha de música (passeio aleatório na escala pentatônica)
+    const frase = Math.floor(compasso / 4) % 4;
+    let prob = dentro % 2 === 0 ? 0.55 : 0.2;
+    if (frase === 3) prob *= 0.4;
+    if (Math.random() < prob) {
+      if (dentro === 0) {
+        // começa o compasso perto de uma nota do acorde
+        const alvo = acorde[1 + Math.floor(Math.random() * 3)] + 12;
+        this.nota = this.escala.reduce((m, v, i) => Math.abs(v - alvo) < Math.abs(this.escala[m] - alvo) ? i : m, 0);
+      } else {
+        this.nota = Math.max(0, Math.min(this.escala.length - 1, this.nota + Math.floor(Math.random() * 5) - 2));
+      }
+      const f = midi(this.escala[this.nota]);
+      Som.tom(f, t, 1.3, { vol: 0.055, destino: dest, eco: true });
+      Som.tom(f * 2, t, 0.35, { vol: 0.012, destino: dest });
+    }
+  },
+};
+
+// =====================================================================
+// DESENHO: utilidades de pixel art
+// =====================================================================
+const W = 400, H = 260;
+const canvas = document.getElementById('fazenda');
+const tela = canvas.getContext('2d');
+tela.imageSmoothingEnabled = false;
+let c = tela; // contexto atual (troca para desenhar nos caches)
+
+function novoCanvas(w, h) { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; return cv; }
+function comCtx(ctx, fn) { const antigo = c; c = ctx; fn(); c = antigo; }
+function R(x, y, w, h, cor) { c.fillStyle = cor; c.fillRect(Math.round(x), Math.round(y), w, h); }
+function circulo(cx, cy, r, cor) {
+  c.fillStyle = cor;
+  for (let dy = -r; dy <= r; dy++) {
+    const w = Math.floor(Math.sqrt(r * r - dy * dy) + 0.5);
+    c.fillRect(Math.round(cx - w), Math.round(cy + dy), w * 2 + 1, 1);
+  }
+}
+function elipse(cx, cy, rx, ry, cor) {
+  c.fillStyle = cor;
+  for (let dy = -ry; dy <= ry; dy++) {
+    const w = Math.round(rx * Math.sqrt(1 - (dy / ry) * (dy / ry)));
+    c.fillRect(Math.round(cx - w), Math.round(cy + dy), w * 2 + 1, 1);
+  }
+}
+function sombra(cx, cy, rx, ry) { elipse(cx, cy, rx, ry, 'rgba(30,40,10,.22)'); }
+
+function hash2(x, y) {
+  let h = (x * 374761393 + y * 668265263) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h = h ^ (h >>> 16);
+  return (h >>> 0) / 4294967296;
+}
+function ruido(x, y, escala, semente = 0) {
+  const fx = x / escala, fy = y / escala, x0 = Math.floor(fx), y0 = Math.floor(fy);
+  const sx = fx - x0, sy = fy - y0, s = t => t * t * (3 - 2 * t);
+  const a = hash2(x0 + semente, y0), b = hash2(x0 + 1 + semente, y0);
+  const c2 = hash2(x0 + semente, y0 + 1), d = hash2(x0 + 1 + semente, y0 + 1);
+  const top = a + (b - a) * s(sx), bot = c2 + (d - c2) * s(sx);
+  return top + (bot - top) * s(sy);
+}
+function rgb(hex) { const n = parseInt(hex.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
+
+// Gerador aleatório com semente (o cenário fica sempre igual)
+function rng(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const rnd = rng(20240607);
+const entre = (a, b) => a + rnd() * (b - a);
+const entreI = (a, b) => Math.round(entre(a, b));
+
+// Sprites a partir de "desenhos" em texto, com contorno automático
+function criarSprite(linhas, paleta, contorno) {
+  const h = linhas.length, w = Math.max(...linhas.map(l => l.length));
+  const cv = novoCanvas(w + 2, h + 2), x = cv.getContext('2d');
+  const cheio = (i, j) => j >= 0 && j < h && i >= 0 && i < (linhas[j] || '').length && paleta[linhas[j][i]];
+  if (contorno) {
+    x.fillStyle = contorno;
+    for (let j = -1; j <= h; j++) for (let i = -1; i <= w; i++) {
+      if (cheio(i, j)) continue;
+      if (cheio(i - 1, j) || cheio(i + 1, j) || cheio(i, j - 1) || cheio(i, j + 1)) x.fillRect(i + 1, j + 1, 1, 1);
+    }
+  }
+  for (let j = 0; j < h; j++) for (let i = 0; i < linhas[j].length; i++) {
+    const cor = paleta[linhas[j][i]];
+    if (cor) { x.fillStyle = cor; x.fillRect(i + 1, j + 1, 1, 1); }
+  }
+  return cv;
+}
+function espelhar(cv) {
+  const e = novoCanvas(cv.width, cv.height), x = e.getContext('2d');
+  x.translate(cv.width, 0); x.scale(-1, 1); x.drawImage(cv, 0, 0);
+  return e;
+}
+function conjunto(quadros, paleta, contorno) {
+  const r = {};
+  for (const k in quadros) { const d = criarSprite(quadros[k], paleta, contorno); r[k] = { d, e: espelhar(d) }; }
+  return r;
+}
+
+// =====================================================================
+// MAPA DA FAZENDA (400 x 260)
+// =====================================================================
+// Oeste (x < 104): estufa, pomar, lago — liberado pela ponte.
+// Riacho (x ~104..118) com a ponte caída no meio.
+// Centro (x 120..284): casa, poço, plantações, galinheiro, moinho.
+// Leste (x > 286): mata fechada que vira pasto com celeiro.
+const riachoX = y => 110 + Math.round(2.5 * Math.sin(y / 16));
+const LAGO = { cx: 50, cy: 198, rx: 40, ry: 31 };
+const CANAL_Y = [191, 198];
+const PONTE = { x1: 98, x2: 124, y: 117 };
+
+const AREAS = {
+  galinhas: { x1: 243, x2: 276, y1: 82, y2: 109 },
+  pasto:    { x1: 302, x2: 386, y1: 94, y2: 244 },
+};
+const SLOTS = {
+  cenoura: Array.from({ length: 8 }, (_, i) => ({ x: 126 + (i % 4) * 17, y: 74 + Math.floor(i / 4) * 18 })),
+  trigo:   Array.from({ length: 8 }, (_, i) => ({ x: 126 + (i % 4) * 17, y: 134 + Math.floor(i / 4) * 19 })),
+  abobora: Array.from({ length: 8 }, (_, i) => ({ x: 126 + (i % 4) * 17, y: 177 + Math.floor(i / 4) * 18 })),
+  milho:   Array.from({ length: 20 }, (_, i) => ({ x: 217 + (i % 10) * 7, y: 154 + Math.floor(i / 10) * 21 })),
+  pomar:   Array.from({ length: 10 }, (_, i) => ({ x: 14 + (i % 5) * 17 + Math.floor(i / 5) * 8, y: 92 + Math.floor(i / 5) * 21 })),
+  morango: Array.from({ length: 10 }, (_, i) => ({ x: 22 + (i % 5) * 14, y: 47 + Math.floor(i / 5) * 8 })),
+};
+const LIMITE_VISUAL = { cenoura: 8, trigo: 8, abobora: 8, milho: 10, pomar: 10, morango: 10 };
+
+function zona(x) { return x < 104 ? 'oeste' : x > 286 ? 'leste' : 'centro'; }
+function dentroLago(x, y, folga = 0) {
+  const dx = (x - LAGO.cx) / (LAGO.rx + folga), dy = (y - LAGO.cy) / (LAGO.ry + folga);
+  return dx * dx + dy * dy <= 1;
+}
+function areaLivreCentro(x, y) {
+  if (x > 128 && x < 238 && y < 72) return false;          // casa e poço
+  if (x > 194 && x < 211) return hash2(x, y) < 0.25;        // caminho
+  return true;
+}
+
+// ---------- Cenário gerado uma vez ----------
+function gerar(n, x1, x2, y1, y2, filtro, fn) {
+  const lista = [];
+  let tent = 0;
+  while (lista.length < n && tent++ < n * 30) {
+    const x = entreI(x1, x2), y = entreI(y1, y2);
+    if (!filtro || filtro(x, y)) lista.push(fn(x, y));
+  }
+  return lista;
+}
+const CENARIO = {
+  manchas: gerar(26, 124, 282, 70, 250, areaLivreCentro, (x, y) => ({ x, y, rx: entreI(4, 10), ry: entreI(2, 4) })),
+  mato: gerar(110, 122, 284, 10, 252, areaLivreCentro, (x, y) => ({ x, y, v: Math.floor(rnd() * 4) })),
+  pedras: gerar(26, 124, 282, 12, 250, areaLivreCentro, (x, y) => ({ x, y, v: Math.floor(rnd() * 3) })),
+  lixo: gerar(22, 124, 282, 12, 250, areaLivreCentro, (x, y) => ({ x, y, v: Math.floor(rnd() * 5) })),
+  galhos: gerar(18, 124, 280, 12, 250, areaLivreCentro, (x, y) => ({ x, y, v: Math.floor(rnd() * 2) })),
+  entulho: gerar(30, 8, 96, 70, 158, null, (x, y) => ({ x, y, v: Math.floor(rnd() * 7) })),
+  matoOeste: gerar(60, 6, 100, 8, 162, (x, y) => !dentroLago(x, y, 4), (x, y) => ({ x, y, v: Math.floor(rnd() * 4) })),
+  lixoLago: Array.from({ length: 7 }, () => ({ x: entreI(22, 78), y: entreI(182, 214), v: Math.floor(rnd() * 4), f: rnd() * 6 })),
+  algas: Array.from({ length: 12 }, () => ({ x: entreI(18, 82), y: entreI(178, 220), r: entreI(2, 4) })),
+  vitorias: Array.from({ length: 6 }, () => ({ x: entreI(22, 78), y: entreI(184, 214), flor: rnd() < 0.5 })),
+  taboas: [[16, 182], [12, 200], [24, 222], [84, 210], [78, 176], [45, 167]],
+  flores: gerar(110, 6, 396, 10, 252, (x, y) => !dentroLago(x, y, 4) && Math.abs(x - riachoX(y)) > 9,
+    (x, y) => ({ x, y, cor: ['#ff8fb1', '#ffd93d', '#ffffff', '#b28dff', '#ff9e5e'][Math.floor(rnd() * 5)] })),
+  arvoresMata: (() => {
+    const l = [];
+    for (let y = -4; y < 268; y += 9) for (let x = 284; x < 406; x += 11) {
+      l.push({ x: x + entreI(-4, 4) + ((y / 9) % 2) * 5, y: y + entreI(-3, 3), r: entreI(6, 9), v: Math.floor(rnd() * 3) });
+    }
+    return l.sort((a, b) => a.y - b.y);
+  })(),
+  borboletas: Array.from({ length: 6 }, (_, i) => ({ x: entreI(30, 370), y: entreI(40, 230), f: rnd() * 10, cor: ['#ffffff', '#ffd93d', '#ff9e5e', '#8fd3ff', '#ff8fb1', '#ffffff'][i] })),
+  nuvens: Array.from({ length: 3 }, (_, i) => ({ x: i * 170 + entreI(0, 60), y: entreI(30, 220), rx: entreI(40, 60), ry: entreI(14, 22), v: entre(4, 7) })),
+};
+
+// =====================================================================
+// CAMADA DO CHÃO (cache redesenhado só quando algo muda)
+// =====================================================================
+const GRAMA = ['#4f8f3a', '#5a9e3f', '#66ad45', '#72ba4c', '#82c657'].map(rgb);
+const SECA  = ['#6c6538', '#787040', '#837a46', '#8e844d', '#9a8f56'].map(rgb);
+const sombraGrama = (() => {
+  const s = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const v = ruido(x, y, 18) * 0.55 + ruido(x, y, 6, 50) * 0.3 + hash2(x, y) * 0.15;
+    s[y * W + x] = Math.max(0, Math.min(4, Math.floor(v * 5.2 - 0.3)));
+  }
+  // folhinhas de grama: um pixel claro com um escuro embaixo
+  for (let y = 1; y < H - 1; y++) for (let x = 0; x < W; x++) {
+    const h = hash2(x * 7 + 3, y * 13 + 1);
+    if (h > 0.955) { s[y * W + x] = Math.min(4, s[y * W + x] + 2); s[(y + 1) * W + x] = Math.max(0, s[(y + 1) * W + x] - 1); }
+    else if (h < 0.025) s[y * W + x] = Math.max(0, s[y * W + x] - 2);
+  }
+  return s;
+})();
+
+function nivelCentro() { return ['mato', 'pedras', 'lixo', 'cerca'].filter(tem).length; }
+function sujeiraZona(z) {
+  if (z === 'centro') return 1 - nivelCentro() / 4;
+  if (z === 'oeste') return tem('ponte') ? Math.max(0, 0.75 - 0.25 * ['entulho', 'lago', 'estufa'].filter(tem).length) : 0.9;
+  return tem('mata') ? 0 : 0.5;
+}
+
+const cacheChao = novoCanvas(W, H);
+const cacheTopo = novoCanvas(W, H);
+
+function desenharGramaBase() {
+  const ctx = cacheChao.getContext('2d');
+  const img = ctx.createImageData(W, H), d = img.data;
+  const suj = { oeste: sujeiraZona('oeste'), centro: sujeiraZona('centro'), leste: sujeiraZona('leste') };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x, s = sombraGrama[i], k = suj[zona(x)] * 0.85;
+    const g = GRAMA[s], sc = SECA[s];
+    d[i * 4] = g[0] + (sc[0] - g[0]) * k;
+    d[i * 4 + 1] = g[1] + (sc[1] - g[1]) * k;
+    d[i * 4 + 2] = g[2] + (sc[2] - g[2]) * k;
+    d[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function caminho(x, y, w, h, gasto) {
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const px = x + i, py = y + j, hh = hash2(px * 3, py * 5);
+    if (gasto && hash2(px, py * 2) < gasto) continue; // grama tomando conta
+    let cor = hh < 0.15 ? '#c39c62' : hh > 0.9 ? '#e0bf8a' : '#d4b07a';
+    if (hh > 0.985) cor = '#a8875a';
+    R(px, py, 1, 1, cor);
+  }
+}
+
+function canteiroTerra(x, y, w, h) {
+  R(x, y + 1, w, h - 1, '#5c3a20');
+  R(x, y, w, h - 1, '#77492a');
+  for (let j = 2; j < h - 1; j += 3) R(x + 1, y + j, w - 2, 1, '#653e22');
+  for (let i = 0; i < w; i += 3) if (hash2(x + i, y) > 0.5) R(x + i, y + 1 + (i % 5), 1, 1, '#8d5c38');
+  R(x, y, w, 1, '#8d5c38');
+}
+
+function desenharCamadaChao() {
+  desenharGramaBase();
+  comCtx(cacheChao.getContext('2d'), () => {
+    const sujC = sujeiraZona('centro');
+    // manchas de terra batida no centro
+    const nm = Math.round(CENARIO.manchas.length * sujC);
+    for (let i = 0; i < nm; i++) { const m = CENARIO.manchas[i]; elipse(m.x, m.y, m.rx, m.ry, '#8a6e45'); elipse(m.x - 1, m.y - 1, m.rx - 2, Math.max(1, m.ry - 1), '#987a4e'); }
+
+    // flores e trevos nas áreas limpas
+    for (const f of CENARIO.flores) {
+      const z = zona(f.x);
+      const ok = z === 'centro' ? tem('cerca') : z === 'oeste' ? tem('entulho') : tem('mata');
+      if (!ok) continue;
+      R(f.x, f.y + 1, 1, 1, '#3f7f2c');
+      R(f.x - 1, f.y, 1, 1, f.cor); R(f.x + 1, f.y, 1, 1, f.cor); R(f.x, f.y - 1, 1, 1, f.cor);
+      R(f.x, f.y, 1, 1, '#ffe27a');
+    }
+
+    // caminhos de terra
+    const gastoC = Math.max(0, sujC - 0.25) * 0.5;
+    caminho(197, 66, 11, 194, gastoC);
+    caminho(120, 120, 78, 9, gastoC);
+    caminho(207, 120, 84, 9, gastoC);
+    caminho(2, 120, 98, 9, tem('ponte') ? 0 : 0.55);
+
+    // margens do riacho e do lago (areia)
+    for (let y = 0; y < H; y++) {
+      const x = riachoX(y);
+      R(x - 9, y, 3, 1, '#c8b07a'); R(x + 7, y, 3, 1, '#c8b07a');
+      R(x - 7, y, 1, 1, '#a88f62'); R(x + 7, y, 1, 1, '#a88f62');
+    }
+    elipse(LAGO.cx, LAGO.cy, LAGO.rx + 4, LAGO.ry + 4, '#d6be88');
+    elipse(LAGO.cx, LAGO.cy, LAGO.rx + 2, LAGO.ry + 2, '#b89c68');
+    R(86, CANAL_Y[0] - 2, riachoX(195) - 86, CANAL_Y[1] - CANAL_Y[0] + 4, '#c8b07a');
+
+    // terra arada das plantações compradas
+    SLOTS.cenoura.slice(0, Math.min(qtd('cenoura'), LIMITE_VISUAL.cenoura)).forEach(s => canteiroTerra(s.x, s.y, 16, 15));
+    SLOTS.trigo.slice(0, Math.min(qtd('trigo'), LIMITE_VISUAL.trigo)).forEach(s => canteiroTerra(s.x, s.y, 16, 17));
+    SLOTS.abobora.slice(0, Math.min(qtd('abobora'), LIMITE_VISUAL.abobora)).forEach(s => { R(s.x, s.y, 16, 16, '#6f4b2a'); R(s.x + 1, s.y + 1, 14, 14, '#7d5532'); });
+    const pesMilho = Math.min(qtd('milho') * 2, 20);
+    for (let r = 0; r < 2; r++) {
+      const n = Math.max(0, Math.min(10, pesMilho - r * 10));
+      if (n) { R(213, 154 + r * 21 - 1, n * 7 + 2, 4, '#6e4426'); R(213, 154 + r * 21 - 1, n * 7 + 2, 1, '#8d5c38'); }
+    }
+
+    // pasto: poça de lama dos porcos
+    if (tem('mata')) {
+      elipse(318, 232, 15, 7, '#6b4a2b'); elipse(317, 231, 12, 5, '#7d5634'); R(310, 229, 4, 1, '#94693f'); R(322, 233, 3, 1, '#94693f');
+    }
+  });
+}
+
+// =====================================================================
+// CAMADA DE OBJETOS (cache): sujeira, cercas, construções, mata
+// =====================================================================
+function desenharMato(m, escuro) {
+  const e = escuro ? '#3f5a22' : '#4d6a28', cl = escuro ? '#5c7a2e' : '#6f8f34', fl = '#88a943';
+  if (m.v === 3) { // moita
+    circulo(m.x, m.y - 3, 4, '#2f4419'); circulo(m.x, m.y - 3, 3, e);
+    R(m.x - 2, m.y - 5, 2, 1, cl); R(m.x + 1, m.y - 4, 2, 1, cl); R(m.x - 1, m.y - 6, 1, 1, fl);
+    if (hash2(m.x, m.y) > 0.6) R(m.x + 2, m.y - 6, 1, 1, '#e8e2a0');
+  } else {
+    R(m.x - 3, m.y, 7, 1, 'rgba(30,40,10,.25)');
+    R(m.x, m.y - 6, 1, 6, e); R(m.x - 2, m.y - 4, 1, 4, e); R(m.x + 2, m.y - 5, 1, 5, e);
+    R(m.x - 1, m.y - 7, 1, 3, cl); R(m.x + 1, m.y - 8, 1, 4, cl); R(m.x - 3, m.y - 2, 1, 2, cl);
+    if (m.v === 1) { R(m.x + 3, m.y - 3, 1, 3, cl); R(m.x + 4, m.y - 4, 1, 1, fl); }
+    if (m.v === 2) { R(m.x, m.y - 9, 1, 2, '#c9b35a'); R(m.x - 1, m.y - 10, 3, 1, '#d8c46a'); }
+  }
+}
+function desenharPedra(p) {
+  if (p.v === 2) {
+    elipse(p.x, p.y - 3, 6, 4, '#4f4f55'); elipse(p.x, p.y - 3, 5, 3, '#8a8a90');
+    elipse(p.x - 1, p.y - 4, 3, 2, '#a5a5ab'); R(p.x - 2, p.y - 6, 2, 1, '#c4c4ca'); R(p.x + 2, p.y - 2, 2, 1, '#6e6e74');
+    R(p.x + 3, p.y - 5, 1, 2, '#7cae4a');
+  } else {
+    const r = p.v ? 3 : 2;
+    elipse(p.x, p.y - r, r + 1, r, '#4f4f55'); elipse(p.x, p.y - r, r, r - 1, '#8d8d93');
+    R(p.x - r + 1, p.y - r - 1, r, 1, '#b4b4ba'); R(p.x, p.y - 1, r, 1, '#6a6a70');
+  }
+}
+function desenharLixo(l) {
+  const { x, y } = l;
+  if (l.v === 0) { R(x - 1, y - 4, 4, 5, '#4a4f55'); R(x, y - 4, 2, 4, '#b8c0c8'); R(x, y - 3, 2, 1, '#d64545'); R(x, y - 4, 1, 1, '#e8edf2'); }
+  else if (l.v === 1) { R(x - 1, y - 3, 5, 3, '#9a958a'); R(x, y - 3, 4, 2, '#f2efe6'); R(x + 1, y - 2, 2, 1, '#cfcabc'); }
+  else if (l.v === 2) { R(x - 1, y - 3, 7, 3, '#1f4a30'); R(x, y - 3, 4, 2, '#3c8d5a'); R(x + 4, y - 3, 1, 1, '#2c6d45'); R(x + 1, y - 3, 1, 1, '#9fe0b8'); }
+  else if (l.v === 3) { elipse(x, y - 3, 4, 3, '#1a1a1a'); elipse(x, y - 3, 3, 2, '#3a3a3a'); elipse(x, y - 3, 1, 1, '#6b8a35'); R(x - 2, y - 5, 2, 1, '#555'); }
+  else { R(x - 2, y - 4, 6, 4, '#5a4632'); R(x - 1, y - 4, 4, 3, '#a07b4c'); R(x - 1, y - 2, 4, 1, '#8b673e'); R(x, y - 4, 1, 3, '#7a5a35'); } // caixote quebrado
+}
+function desenharGalho(g) {
+  const cor = '#5e4129', cl = '#7d5a3a';
+  for (let i = 0; i < 9; i++) { const dy = g.v ? -Math.floor(i / 2) : Math.floor(i / 3); R(g.x + i, g.y + dy - 1, 1, 2, i % 3 ? cor : cl); }
+  R(g.x + 4, g.y - 3 + (g.v ? -2 : 2), 1, 2, cl); R(g.x + 5, g.y - 4 + (g.v ? -2 : 2), 1, 1, '#6b8a35');
+}
+function desenharEntulho(e) {
+  const { x, y } = e;
+  if (e.v === 0) { // pilha de tijolos
+    R(x - 6, y - 2, 13, 3, '#6e3524');
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 4 - j; i++) {
+      const bx = x - 6 + i * 3 + j * 2, by = y - 3 - j * 2;
+      R(bx, by, 3, 2, (i + j) % 2 ? '#b5543c' : '#c8664a'); R(bx, by + 1, 3, 1, '#8e3a28');
+    }
+  } else if (e.v === 1) { // tábuas
+    for (let i = 0; i < 3; i++) { R(x - 7 + i, y - 2 - i * 2, 13, 2, i % 2 ? '#9a7048' : '#b0845a'); R(x - 7 + i, y - 1 - i * 2, 13, 1, '#6e4c2e'); }
+    R(x - 3, y - 6, 1, 1, '#555');
+  } else if (e.v === 2) { // barril quebrado
+    elipse(x, y - 4, 5, 4, '#4a3020'); elipse(x, y - 4, 4, 3, '#8b5a2b');
+    R(x - 4, y - 6, 9, 1, '#6a6a6a'); R(x - 4, y - 2, 9, 1, '#6a6a6a'); R(x - 1, y - 7, 2, 2, '#3a2416');
+  } else if (e.v === 3) { // caixote
+    R(x - 5, y - 8, 10, 8, '#5a4030'); R(x - 4, y - 7, 8, 6, '#b08458');
+    for (let i = 0; i < 6; i++) R(x - 4 + i * 1.4, y - 7 + i, 1, 1, '#7a5634');
+    R(x - 4, y - 4, 8, 1, '#8b6a45');
+  } else if (e.v === 4) { // pedrão
+    elipse(x, y - 4, 7, 5, '#45454b'); elipse(x, y - 4, 6, 4, '#7d7d84'); elipse(x - 2, y - 6, 3, 2, '#9c9ca3'); R(x + 2, y - 2, 3, 1, '#606067');
+  } else if (e.v === 5) { // sucata
+    R(x - 5, y - 3, 10, 3, '#5d5d63'); R(x - 4, y - 5, 4, 2, '#a0522d'); R(x, y - 4, 5, 2, '#8a8a90'); R(x + 2, y - 6, 1, 3, '#a0522d');
+    R(x - 2, y - 4, 1, 1, '#c97a4a');
+  } else desenharMato({ x, y, v: 3 }, true);
+}
+
+// ---------- Cercas ----------
+function cercaH(x0, x1, y, ok, buracos = []) {
+  const cor = ok ? '#d39b5c' : '#8c7d69', cl = ok ? '#f0c58a' : '#a8998a', esc = ok ? '#8f5f30' : '#5f5446';
+  for (let x = x0; x < x1; x += 8) {
+    if (buracos.some(([a, b]) => x + 8 > a && x < b)) continue;
+    const h = hash2(x, y * 7), falta = !ok && h < 0.2, torto = !ok && h > 0.72;
+    if (!falta && x + 8 <= x1) {
+      R(x + 2, y + 2, 7, 1, cl); R(x + 2, y + 3, 7, 1, esc);
+      if (!torto) { R(x + 2, y + 6, 7, 1, cl); R(x + 2, y + 7, 7, 1, esc); }
+      else R(x + 4, y + 7, 5, 1, esc);
+    }
+    if (!(falta && h < 0.08)) {
+      const t = torto ? 1 : 0;
+      R(x + t, y - 1 + t, 3, 10 - t, esc);
+      R(x + t, y - 1 + t, 2, 9 - t, cor); R(x + t, y - 1 + t, 2, 1, cl);
+    }
+  }
+}
+function cercaV(x, y0, y1, ok, buracos = []) {
+  const cor = ok ? '#d39b5c' : '#8c7d69', cl = ok ? '#f0c58a' : '#a8998a', esc = ok ? '#8f5f30' : '#5f5446';
+  for (let y = y0; y < y1; y += 8) {
+    if (buracos.some(([a, b]) => y + 8 > a && y < b)) continue;
+    const h = hash2(x * 5, y), falta = !ok && h < 0.2, torto = !ok && h > 0.75;
+    if (!falta && y + 8 <= y1) { R(x + 1, y + 2, 1, 8, cl); R(x + 2, y + 2, 1, 8, esc); }
+    const t = torto ? 1 : 0;
+    R(x - 1 + t, y + 1, 4, 4, esc); R(x - 1 + t, y, 4, 3, cor); R(x + t, y, 2, 1, cl);
+  }
+}
+
+// ---------- Construções ----------
+function telhado(cx, yTopo, linhas, larguraTopo, cores, borda) {
+  for (let i = 0; i < linhas; i++) {
+    const w = larguraTopo + i * 2;
+    R(cx - w / 2, yTopo + i, w, 1, cores[i % cores.length]);
+    if (i % 2 === 0) for (let k = (i % 4 ? 2 : 0); k < w; k += 4) R(cx - w / 2 + k, yTopo + i, 1, 1, borda);
+  }
+  const wb = larguraTopo + (linhas - 1) * 2;
+  R(cx - wb / 2, yTopo + linhas - 1, wb, 1, borda);
+}
+function placa(x, y) {
+  R(x, y - 4, 2, 9, '#5e3b1a');
+  R(x - 6, y - 12, 14, 9, '#5e3b1a'); R(x - 5, y - 11, 12, 7, '#c8955a'); R(x - 5, y - 11, 12, 1, '#e0b27a');
+  R(x - 3, y - 9, 8, 1, '#7a4a20'); R(x - 3, y - 7, 6, 1, '#7a4a20');
+}
+
+function casaVelha() {
+  const cx = 202;
+  sombra(cx, 67, 30, 3);
+  telhado(cx, 12, 22, 22, ['#5d5148', '#51463e'], '#3c332c');
+  R(178, 21, 6, 4, '#231a14'); R(214, 26, 5, 3, '#231a14'); R(196, 16, 3, 2, '#231a14');
+  R(170, 33, 6, 1, '#3c332c');
+  R(178, 34, 48, 32, '#76603f');
+  for (let y = 36; y < 66; y += 3) { R(178, y, 48, 2, '#8b7355'); }
+  R(186, 38, 1, 9, '#5a4630'); R(220, 52, 1, 10, '#5a4630'); R(182, 58, 4, 1, '#5a4630');
+  R(205, 40, 4, 2, '#3a2a1c');
+  R(196, 46, 12, 20, '#3a2a1c'); R(197, 47, 9, 19, '#4a3626'); R(198, 48, 1, 17, '#3a2a1c'); R(202, 48, 1, 17, '#3a2a1c');
+  for (const wx of [182, 212]) {
+    R(wx, 41, 11, 9, '#231a14');
+    for (let i = 0; i < 11; i++) { R(wx + i, 41 + Math.round(i * 8 / 10), 1, 1, '#a0855f'); R(wx + 10 - i, 41 + Math.round(i * 8 / 10), 1, 1, '#a0855f'); }
+    R(wx, 45, 11, 1, '#8a7050');
+  }
+  // trepadeiras
+  for (let i = 0; i < 14; i++) R(178 + (i % 3), 66 - i * 2, 2, 2, i % 2 ? '#4d6a28' : '#6f8f34');
+  for (let i = 0; i < 10; i++) R(224 - (i % 2), 66 - i * 2, 2, 2, i % 2 ? '#4d6a28' : '#6f8f34');
+  R(178, 64, 48, 2, '#5f564c');
+}
+function casaNova() {
+  const cx = 202;
+  sombra(cx, 68, 32, 3);
+  R(213, 6, 8, 14, '#7d3a24'); R(214, 6, 6, 13, '#a0522d');
+  for (let y = 8; y < 19; y += 3) R(214, y, 6, 1, '#874226');
+  R(212, 5, 10, 2, '#5e2c1c');
+  telhado(cx, 12, 22, 22, ['#e05a47', '#c94a3a'], '#9b3426');
+  R(cx - 11, 12, 22, 1, '#f07a62');
+  R(178, 34, 48, 32, '#d9bf91');
+  for (let y = 34; y < 64; y += 3) { R(179, y, 46, 2, '#f6e3c3'); R(179, y + 2, 46, 1, '#e8d0a8'); }
+  R(178, 34, 2, 30, '#c9a26b'); R(224, 34, 2, 30, '#c9a26b');
+  R(178, 63, 48, 3, '#9a8f80'); for (let x = 179; x < 225; x += 5) R(x, 64, 1, 1, '#7d7366');
+  // porta com toldo
+  R(194, 42, 16, 3, '#9b3426'); R(194, 42, 16, 1, '#e05a47');
+  R(195, 45, 14, 21, '#ffffff'); R(196, 46, 12, 20, '#a0663a'); R(197, 47, 4, 8, '#8b5530'); R(203, 47, 4, 8, '#8b5530');
+  R(197, 57, 4, 7, '#8b5530'); R(203, 57, 4, 7, '#8b5530'); R(205, 56, 1, 2, '#f5d742');
+  R(192, 66, 20, 2, '#b38655'); R(193, 66, 18, 1, '#cfa06b');
+  // lampião
+  R(212, 47, 3, 4, '#3a2a1c'); R(213, 48, 1, 2, '#ffe27a');
+  for (const wx of [182, 213]) {
+    R(wx - 1, 40, 12, 11, '#ffffff'); R(wx, 41, 10, 9, '#9fd8ff');
+    R(wx + 1, 42, 3, 1, '#d8f1ff'); R(wx + 1, 43, 1, 2, '#d8f1ff');
+    R(wx + 4, 41, 2, 9, '#ffffff'); R(wx, 45, 10, 1, '#ffffff');
+    R(wx, 41, 1, 9, '#ff9eb5'); R(wx + 9, 41, 1, 9, '#ff9eb5');
+    R(wx - 2, 51, 14, 3, '#8b5a2b'); R(wx - 2, 51, 14, 1, '#a0703f');
+    for (let i = 0; i < 6; i++) { R(wx - 1 + i * 2, 50, 1, 1, i % 2 ? '#ff6f91' : '#ffd93d'); R(wx + i * 2, 50, 1, 1, '#4caf50'); }
+  }
+  // vasinhos ao lado da porta
+  for (const vx of [188, 214]) { R(vx, 61, 4, 4, '#b5543c'); R(vx, 61, 4, 1, '#d06a4a'); circulo(vx + 2, 59, 2, '#4caf50'); R(vx + 1, 58, 1, 1, '#ff6f91'); R(vx + 3, 59, 1, 1, '#ffd93d'); }
+}
+
+function desenharPoco() {
+  const x = 134, y = 30;
+  sombra(147, 66, 15, 3);
+  R(x + 2, y, 3, 24, '#5c3d24'); R(x + 2, y, 2, 24, '#8a5a32');
+  R(x + 21, y, 3, 24, '#5c3d24'); R(x + 21, y, 2, 24, '#8a5a32');
+  telhado(147, y - 9, 9, 10, ['#c4553b', '#a8442f'], '#7a2e20');
+  R(x + 4, y + 6, 18, 2, '#5c3d24'); R(x + 24, y + 5, 2, 4, '#5c3d24');
+  R(146, y + 8, 1, 9, '#d9c08c');
+  R(144, y + 16, 6, 5, '#5c3d24'); R(145, y + 16, 4, 4, '#a0703f'); R(144, y + 17, 6, 1, '#6a6a6a');
+  // anel de pedra
+  R(x - 1, y + 21, 28, 16, '#55595e');
+  R(x, y + 21, 26, 15, '#9aa0a6');
+  R(x, y + 21, 26, 3, '#b5bbc1'); R(x + 3, y + 22, 20, 1, '#2f6fa8');
+  for (let j = 0; j < 4; j++) for (let i = 0; i < 5; i++) {
+    const bx = x + i * 6 + (j % 2) * 3 - 1, by = y + 25 + j * 3;
+    R(bx, by, 5, 2, (i + j) % 3 ? '#a7adb3' : '#8d9399'); R(bx, by + 2, 6, 1, '#7a8086');
+  }
+  R(x + 1, y + 26, 2, 3, '#6fae4a');
+}
+
+function galinheiroDestruido() {
+  const x = 240, y = 30;
+  sombra(260, 62, 20, 3);
+  R(x + 2, y + 10, 3, 22, '#5a4632'); R(x + 34, y + 18, 3, 14, '#5a4632');
+  for (let i = 0; i < 4; i++) { R(x + 4 + i, y + 26 - i * 2, 26, 3, i % 2 ? '#8b7355' : '#76603f'); R(x + 4 + i, y + 28 - i * 2, 26, 1, '#4a3a2a'); }
+  for (let i = 0; i < 12; i++) R(x + 6 + i * 2, y + 8 + i, 3, 2, i % 2 ? '#6b5444' : '#5d4a3c');
+  R(x + 14, y + 28, 10, 3, '#a0855f'); R(x + 20, y + 24, 2, 8, '#a0855f');
+  for (let i = 0; i < 5; i++) R(x + 26 + i * 2, y + 29 - (i % 2), 2, 1, '#d8c46a');
+  desenharMato({ x: x + 4, y: y + 32, v: 1 }); desenharMato({ x: x + 33, y: y + 33, v: 0 });
+}
+function galinheiroNovo() {
+  const x = 240, y = 22;
+  sombra(260, 63, 21, 3);
+  R(x + 6, y + 30, 2, 10, '#5c3d24'); R(x + 32, y + 30, 2, 10, '#5c3d24');
+  telhado(260, y, 10, 20, ['#e05a47', '#c94a3a'], '#9b3426');
+  R(x + 2, y + 10, 36, 21, '#a8723f');
+  for (let i = 0; i < 36; i += 4) R(x + 2 + i, y + 10, 1, 21, '#8a5a30');
+  R(x + 2, y + 10, 36, 1, '#c98f55');
+  R(x + 4, y + 13, 8, 7, '#ffffff'); R(x + 5, y + 14, 6, 5, '#ffe9b0'); R(x + 5, y + 18, 6, 1, '#e9c46a');
+  R(x + 25, y + 15, 9, 16, '#ffffff'); elipse(x + 29, y + 22, 3, 5, '#3a2416'); R(x + 26, y + 26, 7, 5, '#3a2416');
+  // rampinha
+  for (let i = 0; i < 8; i++) R(x + 33 + i * 0.6, y + 31 + i, 4, 1, i % 2 ? '#8a5a30' : '#b07a45');
+  R(x + 2, y + 30, 36, 1, '#6e4426');
+  // ninho com ovinhos
+  R(x + 10, y + 34, 10, 3, '#d8b45a'); R(x + 12, y + 33, 2, 2, '#fff8e7'); R(x + 15, y + 33, 2, 2, '#fff1d0');
+}
+function cercadoGalinhas() {
+  cercaH(234, 282, 66, true);
+  cercaH(234, 282, 112, true, [[250, 266]]);
+  cercaV(234, 66, 114, true); cercaV(281, 66, 114, true);
+  R(262, 98, 9, 3, '#8b5a2b'); R(263, 98, 7, 1, '#e9c46a'); // comedouro
+}
+
+function estufa(ok) {
+  const x = 12, y = 8, w = 80;
+  sombra(52, 64, 42, 3);
+  // fundo e interior
+  R(x, y + 18, w, 38, ok ? '#4c6b44' : '#2c3a2a');
+  R(x + 2, y + 34, w - 4, 20, ok ? '#6b4226' : '#3d3020');
+  if (ok) {
+    for (const s of SLOTS.morango.slice(0, Math.min(qtd('morango'), LIMITE_VISUAL.morango))) desenharMorango(s.x, s.y);
+  } else {
+    for (let i = 0; i < 6; i++) desenharMato({ x: x + 8 + i * 12, y: y + 52, v: i % 4 }, true);
+  }
+  // telhado de vidro (escalonado)
+  for (let i = 0; i < 18; i++) {
+    const lw = 20 + i * 3.4, lx = 52 - lw / 2;
+    R(lx, y + i, lw, 1, ok ? (i % 6 === 0 ? '#e8f4f0' : '#a8d8e6') : '#6f8580');
+  }
+  // vidros das paredes
+  c.globalAlpha = ok ? 0.3 : 0.55;
+  R(x, y + 18, w, 36, ok ? '#bfe6f0' : '#7f948c');
+  c.globalAlpha = 1;
+  const quebrado = (i, j) => !ok && hash2(i * 3 + 1, j * 7 + 2) < 0.45;
+  for (let j = 0; j < 3; j++) for (let i = 0; i < 8; i++) {
+    const px = x + i * 10, py = y + 18 + j * 12;
+    if (quebrado(i, j)) { R(px + 1, py + 1, 9, 11, '#1f2a1e'); R(px + 2 + (i % 3), py + 1, 1, 3, '#8fa59d'); continue; }
+    if (ok) { if ((i + j) % 3 === 0) { R(px + 2, py + 2, 1, 3, '#ffffff'); R(px + 3, py + 2, 1, 1, '#ffffff'); } }
+    else if (hash2(i, j) > 0.6) { for (let k = 0; k < 6; k++) R(px + 2 + k, py + 3 + (k % 2) * 2 + k, 1, 1, '#d8e0dc'); }
+  }
+  // estrutura
+  const est = ok ? '#f2f6f2' : '#7b6f62', estE = ok ? '#b6c4bc' : '#55493e';
+  for (let i = 0; i <= 8; i++) R(x + i * 10, y + 18, 1, 36, i % 4 === 0 ? estE : est);
+  for (let j = 0; j <= 3; j++) R(x, y + 18 + j * 12, w + 1, 1, est);
+  for (let i = 0; i < 18; i++) { const lw = 20 + i * 3.4; R(52 - lw / 2, y + i, 1, 1, est); R(52 + lw / 2 - 1, y + i, 1, 1, est); }
+  R(51, y, 2, 18, est);
+  // porta
+  R(46, y + 36, 12, 18, est); R(47, y + 37, 10, 17, ok ? '#8fc9d6' : '#2c3a2a'); R(51, y + 37, 1, 17, est);
+  // base de tijolos
+  R(x - 1, y + 54, w + 2, 4, '#8e3a28');
+  for (let i = 0; i < w; i += 5) R(x + i, y + 54, 4, 2, '#b5543c');
+  if (!ok) {
+    // trepadeiras e telhado afundado
+    for (let i = 0; i < 20; i++) R(x + (i * 7) % w, y + 18 + ((i * 13) % 36), 2, 2, i % 2 ? '#4d6a28' : '#6f8f34');
+    for (let i = 0; i < 8; i++) R(x + 30 + i * 2, y + 4 + i, 3, 2, '#2c3a2a');
+  }
+}
+function desenharMorango(x, y) {
+  R(x - 3, y + 1, 7, 1, '#4a2c16');
+  circulo(x, y - 1, 2, '#2f7a35'); R(x - 2, y - 2, 2, 1, '#4fae45'); R(x + 1, y - 3, 1, 1, '#4fae45');
+  R(x - 3, y, 2, 2, '#e8344a'); R(x - 3, y, 1, 1, '#ff8a9a');
+  R(x + 2, y - 1, 2, 2, '#e8344a'); R(x + 3, y, 1, 1, '#ffd2d8');
+  R(x, y - 4, 1, 1, '#ffffff');
+}
+
+function ponte(ok) {
+  const { x1, x2, y } = PONTE;
+  if (ok) {
+    R(x1, y + 15, x2 - x1, 2, 'rgba(20,40,60,.35)');
+    for (let x = x1; x < x2; x += 2) { R(x, y + 2, 2, 13, x % 4 ? '#a0703f' : '#b58250'); R(x, y + 14, 2, 1, '#6e4a2a'); }
+    for (const yy of [y, y + 12]) { R(x1 - 1, yy, x2 - x1 + 2, 2, '#6e4a2a'); R(x1 - 1, yy, x2 - x1 + 2, 1, '#9a6a3a'); }
+    for (const px of [x1 - 1, x1 + 12, x2 - 2]) { R(px, y - 3, 3, 6, '#5c3d24'); R(px, y - 3, 2, 1, '#8a5a32'); R(px, y + 9, 3, 6, '#5c3d24'); }
+  } else {
+    for (let x = x1; x < x1 + 7; x += 2) R(x, y + 2, 2, 13, '#7d6a55');
+    for (let x = x2 - 6; x < x2; x += 2) R(x, y + 3, 2, 12, '#7d6a55');
+    R(x1 - 1, y, 9, 2, '#5a4a3a'); R(x2 - 7, y + 12, 8, 2, '#5a4a3a');
+    // tábuas caídas no riacho
+    for (let i = 0; i < 6; i++) R(x1 + 9 + i * 1.3, y + 6 + i * 1.6, 7, 2, '#6b5a48');
+    R(x1 + 13, y + 1, 2, 5, '#5a4a3a');
+    R(x1 - 1, y - 3, 3, 6, '#4a3a2a'); R(x2 - 1, y - 2, 3, 5, '#4a3a2a');
+  }
+}
+
+function trator(ok) {
+  const x = 212, y = 86;
+  sombra(x + 11, y + 23, 13, 3);
+  const cor = ok ? '#d63c2f' : '#8a5a3a', cl = ok ? '#ff6b57' : '#a0704a', esc = ok ? '#9b2a20' : '#5e3e28';
+  // cabine e corpo
+  R(x + 2, y + 2, 10, 10, esc); R(x + 3, y + 3, 8, 8, ok ? '#bfe6f0' : '#3a3a3a'); R(x + 2, y + 1, 11, 2, cor);
+  R(x + 4, y + 10, 18, 7, esc); R(x + 4, y + 10, 17, 6, cor); R(x + 4, y + 10, 17, 1, cl);
+  R(x + 17, y + 4, 2, 7, '#3a3a3a');
+  if (!ok) { R(x + 8, y + 12, 3, 2, '#a0522d'); R(x + 15, y + 11, 2, 3, '#b8693a'); R(x + 5, y + 14, 2, 1, '#6e4a30'); }
+  // rodas
+  circulo(x + 6, y + 18, 5, '#1f1f1f'); circulo(x + 6, y + 18, 3, '#3a3a3a'); circulo(x + 6, y + 18, 1, ok ? '#f5c542' : '#7a6a50');
+  circulo(x + 19, y + 20, 3, '#1f1f1f'); R(x + 19, y + 20, 1, 1, ok ? '#f5c542' : '#7a6a50');
+  if (!ok) { R(x + 1, y + 21, 10, 2, '#1f1f1f'); desenharMato({ x: x + 22, y: y + 24, v: 1 }); desenharMato({ x: x, y: y + 24, v: 0 }); }
+}
+
+function moinhoCorpo() {
+  const cx = 258, base = 252, topo = 214;
+  sombra(cx, base, 16, 3);
+  for (let y = topo; y < base; y++) {
+    const w = Math.round(16 + (y - topo) * 0.32);
+    R(cx - w / 2, y, w, 1, '#e8dcc0');
+    R(cx - w / 2, y, 2, 1, '#cbbd9c'); R(cx + w / 2 - 2, y, 2, 1, '#bfae8a');
+    if ((y - topo) % 5 === 0) R(cx - w / 2, y, w, 1, '#d4c6a6');
+  }
+  R(cx - 4, base - 11, 8, 11, '#6e4426'); R(cx - 3, base - 10, 6, 10, '#8b5a2b'); R(cx, base - 10, 1, 10, '#6e4426');
+  R(cx - 2, topo + 12, 4, 5, '#5e3b1a'); R(cx - 1, topo + 13, 2, 3, '#ffe9a0');
+  // capota
+  for (let i = 0; i < 8; i++) { const w = 6 + i * 2; R(cx - w / 2, topo - 8 + i, w, 1, i % 2 ? '#8b5a2b' : '#a0703f'); }
+  R(cx - 10, topo - 1, 20, 2, '#5e3b1a');
+}
+function espantalho() {
+  const x = 140, y = 240;
+  sombra(x, y, 6, 2);
+  R(x, y - 20, 2, 20, '#7a4f2c');
+  R(x - 9, y - 16, 20, 2, '#7a4f2c');
+  R(x - 5, y - 17, 12, 9, '#4a7fc1'); for (let i = 0; i < 12; i += 3) R(x - 5 + i, y - 17, 1, 9, '#3a64a0'); R(x - 5, y - 13, 12, 1, '#d64545');
+  R(x - 9, y - 17, 4, 3, '#4a7fc1'); R(x + 7, y - 17, 4, 3, '#4a7fc1');
+  R(x - 10, y - 15, 2, 2, '#e9c46a'); R(x + 10, y - 15, 2, 2, '#e9c46a');
+  circulo(x + 1, y - 21, 4, '#e8d3a0'); R(x - 1, y - 22, 1, 1, '#3a2416'); R(x + 3, y - 22, 1, 1, '#3a2416'); R(x, y - 19, 3, 1, '#a0522d');
+  R(x - 6, y - 25, 14, 2, '#d8b45a'); R(x - 3, y - 28, 8, 3, '#e9c46a'); R(x - 3, y - 26, 8, 1, '#d64545');
+}
+function celeiro() {
+  const cx = 328, x = 302, y = 30;
+  sombra(cx, 67, 30, 3);
+  telhado(cx, 8, 23, 14, ['#8e2b20', '#7a2219'], '#5c1a12');
+  R(cx - 7, 8, 14, 1, '#b5402f');
+  R(x, y, 52, 36, '#c0392b');
+  for (let i = 0; i < 52; i += 4) R(x + i, y, 1, 36, '#a93226');
+  R(x, y, 52, 1, '#d9533f');
+  R(x, y, 2, 36, '#fff4e6'); R(x + 50, y, 2, 36, '#fff4e6');
+  // janela do feno
+  R(cx - 6, y + 3, 12, 9, '#fff4e6'); R(cx - 5, y + 4, 10, 7, '#5c1a12'); R(cx - 5, y + 8, 10, 3, '#e9c46a'); R(cx - 3, y + 7, 2, 1, '#f5d97a');
+  // portas grandes
+  R(cx - 13, y + 15, 26, 21, '#fff4e6'); R(cx - 12, y + 16, 24, 20, '#7b2318');
+  for (let i = 0; i < 20; i++) {
+    R(cx - 12 + Math.round(i * 11 / 19), y + 16 + i, 1, 1, '#fff4e6'); R(cx - 1 - Math.round(i * 11 / 19), y + 16 + i, 1, 1, '#fff4e6');
+    R(cx + 1 + Math.round(i * 10 / 19), y + 16 + i, 1, 1, '#fff4e6'); R(cx + 11 - Math.round(i * 10 / 19), y + 16 + i, 1, 1, '#fff4e6');
+  }
+  R(cx, y + 16, 1, 20, '#fff4e6');
+  // cata-vento
+  R(cx, 0, 1, 8, '#3a3a3a'); R(cx - 3, 2, 7, 1, '#3a3a3a'); R(cx - 2, 0, 4, 2, '#3a3a3a');
+  // fardos de feno
+  for (const [fx, fy] of [[x - 2, 62], [x + 54, 62]]) { R(fx, fy, 8, 6, '#c9a043'); R(fx, fy, 8, 1, '#f0d27a'); R(fx, fy + 2, 8, 1, '#a07a2a'); R(fx + 3, fy, 1, 6, '#a07a2a'); }
+}
+function colmeias() {
+  for (let i = 0; i < 3; i++) {
+    const x = 364 + i * 11, y = 44 + (i % 2) * 6;
+    sombra(x + 4, y + 16, 5, 1);
+    R(x + 1, y + 12, 1, 4, '#5c3d24'); R(x + 6, y + 12, 1, 4, '#5c3d24');
+    R(x - 1, y - 1, 10, 2, '#8b5a2b');
+    for (let j = 0; j < 3; j++) { R(x, y + 1 + j * 4, 8, 4, j % 2 ? '#f2d27a' : '#f5e3a8'); R(x, y + 4 + j * 4, 8, 1, '#c9a043'); }
+    R(x + 3, y + 9, 2, 1, '#3a2416');
+  }
+}
+function cercadoPasto() {
+  cercaH(290, 397, 72, true, [[306, 318]]);
+  cercaV(290, 72, 254, true, [[118, 130]]);
+  R(368, 86, 18, 6, '#6e4426'); R(369, 87, 16, 3, '#4aa3df'); R(370, 87, 4, 1, '#a8dcff');
+}
+
+function mataFechada() {
+  for (const a of CENARIO.arvoresMata) {
+    const cores = [['#1e3b1c', '#2c5228', '#3b6b32', '#4d8040'], ['#1b3420', '#264a2a', '#335f35', '#447645'], ['#223a18', '#33521f', '#46692a', '#5a7f35']][a.v];
+    R(a.x - 1, a.y, 3, 5, '#3d2a1a');
+    circulo(a.x, a.y - a.r + 3, a.r, cores[0]);
+    circulo(a.x - 1, a.y - a.r + 2, a.r - 1, cores[1]);
+    circulo(a.x - 2, a.y - a.r + 1, Math.max(2, a.r - 3), cores[2]);
+    R(a.x - 3, a.y - a.r - 1, 2, 1, cores[3]);
+  }
+  // espinheiros na borda
+  for (let y = 4; y < 256; y += 7) {
+    const x = 286 + Math.round(hash2(3, y) * 4);
+    circulo(x, y, 4, '#2a4419'); circulo(x - 1, y - 1, 3, '#3f5f24');
+    R(x - 3, y - 2, 1, 1, '#a8a060'); R(x + 2, y + 1, 1, 1, '#a8a060');
+  }
+  // tronco caído
+  R(288, 128, 24, 6, '#4a3020'); R(288, 128, 24, 2, '#6b4a2f'); elipse(288, 131, 2, 3, '#a07a50'); R(287, 130, 2, 2, '#6b4a2f');
+}
+
+function desenharCamadaTopo() {
+  const ctx = cacheTopo.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  comCtx(ctx, () => {
+    const okCerca = tem('cerca');
+    cercaH(2, 398, 2, okCerca);
+    // sujeira da sede
+    if (!tem('mato')) CENARIO.mato.forEach(m => desenharMato(m));
+    if (!tem('pedras')) CENARIO.pedras.forEach(desenharPedra);
+    if (!tem('lixo')) { CENARIO.galhos.forEach(desenharGalho); CENARIO.lixo.forEach(desenharLixo); }
+    // lado oeste
+    if (!tem('entulho')) { CENARIO.matoOeste.forEach(m => desenharMato(m, true)); CENARIO.entulho.forEach(desenharEntulho); }
+    estufa(tem('estufa'));
+    // construções do centro
+    if (tem('poco')) desenharPoco();
+    if (tem('casa')) casaNova(); else casaVelha();
+    if (tem('galinheiro')) { galinheiroNovo(); cercadoGalinhas(); } else galinheiroDestruido();
+    trator(tem('trator'));
+    if (tem('moinho')) moinhoCorpo();
+    if (tem('espantalho')) espantalho();
+    ponte(tem('ponte'));
+    // leste
+    if (tem('mata')) { cercadoPasto(); celeiroOuTerreno(); if (tem('colmeia')) colmeias(); }
+    else mataFechada();
+    // cerca externa (laterais e frente)
+    cercaV(2, 4, 256, okCerca);
+    cercaV(395, 4, 256, okCerca);
+    cercaH(2, 398, 250, okCerca, [[194, 212]]);
+    // placas avisando áreas bloqueadas
+    if (!tem('ponte')) placa(128, 116);
+    if (!tem('mata')) placa(278, 140);
+  });
+}
+function celeiroOuTerreno() {
+  if (tem('celeiro')) celeiro();
+  else { R(304, 60, 48, 6, '#a88a5a'); for (let i = 0; i < 5; i++) R(306 + i * 10, 52, 2, 14, '#8b5a2b'); }
+}
+
+// =====================================================================
+// CAMADA ANIMADA (desenhada a cada quadro)
+// =====================================================================
+const AGUA = {
+  limpa: { base: '#4a9fe0', funda: '#3a86c8', clara: '#8fd0f5', espuma: '#e0f6ff' },
+  suja:  { base: '#5f6b38', funda: '#4e5a2e', clara: '#7d8a4a', espuma: '#a3ab6e' },
+};
+const vaoLago = [];
+for (let dy = -LAGO.ry; dy <= LAGO.ry; dy++) {
+  const w = Math.round(LAGO.rx * Math.sqrt(1 - (dy / LAGO.ry) ** 2) + Math.sin(dy * 0.6) * 1.2);
+  vaoLago.push([LAGO.cy + dy, LAGO.cx - w, LAGO.cx + w]);
+}
+
+function desenharAgua(t) {
+  const p = tem('lago') ? AGUA.limpa : AGUA.suja;
+  // riacho e canal
+  for (let y = 0; y < H; y++) { const x = riachoX(y); R(x - 6, y, 13, 1, p.base); R(x - 2, y, 5, 1, p.funda); }
+  for (let y = CANAL_Y[0]; y < CANAL_Y[1]; y++) R(88, y, riachoX(y) - 88, 1, p.base);
+  for (let i = 0; i < 26; i++) {
+    const y = Math.floor((i * 37 + t * 0.012) % H), x = riachoX(y) + ((i * 5) % 9) - 4;
+    R(x, y, 1, 3, p.clara);
+  }
+  // lago
+  for (const [y, x0, x1] of vaoLago) R(x0, y, x1 - x0 + 1, 1, p.base);
+  elipse(LAGO.cx + 3, LAGO.cy + 3, LAGO.rx - 14, LAGO.ry - 12, p.funda);
+  for (const [y, x0, x1] of vaoLago) { R(x0, y, 2, 1, p.clara); }
+  for (let i = 0; i < 16; i++) {
+    const a = hash2(i, 9), b = hash2(i, 17);
+    const y = LAGO.cy - LAGO.ry + 4 + Math.floor(b * (LAGO.ry * 2 - 8));
+    const ox = Math.sin(t / 900 + i) * 3;
+    const x = LAGO.cx - LAGO.rx + 8 + a * (LAGO.rx * 2 - 16) + ox;
+    if (!dentroLago(x + 3, y, -2)) continue;
+    const brilho = (Math.sin(t / 500 + i * 2) + 1) / 2;
+    R(x, y, 3 + Math.round(brilho * 2), 1, brilho > 0.8 ? p.espuma : p.clara);
+  }
+  if (tem('lago')) {
+    for (const v of CENARIO.vitorias) {
+      const dx = Math.round(Math.sin(t / 1500 + v.x) * 0.6);
+      elipse(v.x + dx, v.y, 3, 2, '#2f7a35'); elipse(v.x + dx, v.y, 2, 1, '#4fae45'); R(v.x + dx + 1, v.y - 2, 1, 2, p.base);
+      if (v.flor) { R(v.x + dx - 1, v.y - 1, 2, 1, '#ff9eb5'); R(v.x + dx - 1, v.y - 2, 1, 1, '#ffd2dc'); }
+    }
+  } else {
+    for (const a of CENARIO.algas) { elipse(a.x, a.y, a.r + 1, Math.max(1, a.r - 1), '#3f5a24'); R(a.x - 1, a.y, 2, 1, '#566f2c'); }
+    for (const l of CENARIO.lixoLago) {
+      const by = Math.round(Math.sin(t / 600 + l.f));
+      if (l.v === 0) { elipse(l.x, l.y + by, 4, 2, '#1a1a1a'); elipse(l.x, l.y + by, 2, 1, '#3a3a3a'); }
+      else if (l.v === 1) { R(l.x, l.y + by, 5, 2, '#3c8d5a'); R(l.x + 1, l.y + by, 1, 1, '#9fe0b8'); }
+      else if (l.v === 2) { R(l.x, l.y + by, 3, 2, '#b8c0c8'); R(l.x, l.y + by, 3, 1, '#d64545'); }
+      else { R(l.x - 3, l.y + by, 9, 2, '#6b5a48'); R(l.x - 3, l.y + by, 9, 1, '#8a7560'); }
+    }
+    // bolhinhas de lodo
+    const bi = Math.floor(t / 700) % 5;
+    R(30 + bi * 9, 190 + (bi % 3) * 7, 1, 1, '#a3ab6e');
+  }
+}
+
+function taboas(t) {
+  if (!tem('lago')) return;
+  for (const [x, y] of CENARIO.taboas) {
+    for (let k = 0; k < 3; k++) {
+      const bx = x + k * 2 - 2, s = Math.round(Math.sin(t / 800 + x + k) * 0.8);
+      R(bx, y - 8, 1, 8, '#4f8a2c'); R(bx + s, y - 11, 1, 3, '#4f8a2c');
+      R(bx + s, y - 10, 1, 3, '#7a4a28');
+    }
+  }
+}
+
+const balanco = (t, fase, vel = 700) => Math.round(Math.sin(t / vel + fase) * 0.9);
+
+function desenharCenouras(t) {
+  const n = Math.min(qtd('cenoura'), LIMITE_VISUAL.cenoura);
+  for (let i = 0; i < n; i++) {
+    const s = SLOTS.cenoura[i];
+    for (let r = 0; r < 2; r++) for (let j = 0; j < 3; j++) {
+      const cx = s.x + 3 + j * 5, cy = s.y + 6 + r * 6, b = balanco(t, i + j * 1.7 + r);
+      R(cx - 1, cy, 3, 2, '#e07020'); R(cx - 1, cy, 2, 1, '#ff9a3c'); R(cx, cy + 2, 1, 1, '#c45f18');
+      R(cx - 1, cy - 2, 1, 2, '#2f7a35'); R(cx + 1, cy - 2, 1, 2, '#2f7a35'); R(cx, cy - 3, 1, 3, '#3e9440');
+      R(cx - 2 + b, cy - 3, 1, 1, '#5cc25a'); R(cx + b, cy - 4, 1, 1, '#6fd46a'); R(cx + 2 + b, cy - 3, 1, 1, '#5cc25a');
+    }
+  }
+}
+function desenharTrigo(t) {
+  const n = Math.min(qtd('trigo'), LIMITE_VISUAL.trigo);
+  for (let i = 0; i < n; i++) {
+    const s = SLOTS.trigo[i];
+    for (let r = 0; r < 3; r++) for (let k = 0; k < 5; k++) {
+      const x = s.x + 2 + k * 3 + (r % 2), yb = s.y + 7 + r * 4;
+      const b = Math.round(Math.sin(t / 650 + x * 0.25 + r * 0.6) * 1.1);
+      R(x, yb - 5, 1, 5, '#b8902e');
+      R(x + b, yb - 8, 1, 3, '#f2cf63'); R(x + b + 1, yb - 7, 1, 2, '#d9b048'); R(x + b, yb - 9, 1, 1, '#ffe58f');
+    }
+  }
+}
+function desenharMilho(t) {
+  const n = Math.min(qtd('milho') * 2, 20);
+  for (let i = 0; i < n; i++) {
+    const { x, y } = SLOTS.milho[i];
+    const b = Math.round(Math.sin(t / 900 + i * 0.8) * 1.2);
+    R(x, y - 16, 2, 16, '#4c9a2a'); R(x + 1, y - 16, 1, 16, '#3c7d22');
+    R(x - 3, y - 11, 3, 1, '#5fb336'); R(x - 4 + b, y - 12, 1, 1, '#7cc04a');
+    R(x + 2, y - 7, 3, 1, '#5fb336'); R(x + 5 + b, y - 8, 1, 1, '#7cc04a');
+    R(x - 3, y - 4, 3, 1, '#5fb336');
+    R(x + 2, y - 14, 2, 5, '#f5d742'); R(x + 2, y - 14, 1, 1, '#fff08a'); R(x + 3, y - 11, 1, 2, '#d4b02c');
+    R(x + 2, y - 10, 2, 2, '#7cc04a');
+    R(x - 1 + b, y - 19, 4, 1, '#e9c46a'); R(x + b, y - 20, 2, 1, '#f2d27a'); R(x + b, y - 18, 1, 2, '#c9a043');
+  }
+}
+function desenharAboboras(t) {
+  const n = Math.min(qtd('abobora'), LIMITE_VISUAL.abobora);
+  for (let i = 0; i < n; i++) {
+    const s = SLOTS.abobora[i], b = balanco(t, i * 1.3, 900);
+    // folhas e ramas
+    for (const [dx, dy] of [[3, 4], [12, 3], [13, 12], [2, 12]]) {
+      elipse(s.x + dx + (dy < 8 ? b : 0), s.y + dy, 3, 2, '#2f7a35');
+      R(s.x + dx - 1 + (dy < 8 ? b : 0), s.y + dy - 1, 2, 1, '#4fae45');
+    }
+    R(s.x + 4, s.y + 8, 8, 1, '#3e8a35');
+    // abóbora
+    const cx = s.x + 8, cy = s.y + 9;
+    elipse(cx, cy, 5, 4, '#a8501a');
+    elipse(cx, cy, 4, 3, '#ef8a2c');
+    R(cx - 2, cy - 3, 1, 6, '#d06d1a'); R(cx + 2, cy - 3, 1, 6, '#d06d1a');
+    R(cx - 3, cy - 2, 1, 2, '#ffb562'); R(cx - 1, cy - 3, 1, 1, '#ffb562');
+    R(cx, cy - 5, 1, 2, '#6b4a2a'); R(cx + 1, cy - 5, 1, 1, '#4fae45');
+  }
+}
+function desenharPomar(t) {
+  const n = Math.min(qtd('pomar'), LIMITE_VISUAL.pomar);
+  const lista = SLOTS.pomar.slice(0, n).map((s, i) => ({ ...s, i })).sort((a, b) => a.y - b.y);
+  for (const a of lista) {
+    const b = Math.round(Math.sin(t / 1300 + a.i * 1.7) * 0.7);
+    sombra(a.x, a.y + 1, 8, 2);
+    R(a.x - 1, a.y - 7, 3, 8, '#563820'); R(a.x - 1, a.y - 7, 2, 8, '#6e4a2f'); R(a.x - 2, a.y, 5, 1, '#563820');
+    const cx = a.x + b, cy = a.y - 13;
+    circulo(cx, cy, 8, '#24502a');
+    circulo(cx, cy, 7, '#2f7a35');
+    circulo(cx - 1, cy - 1, 6, '#3f9440');
+    circulo(cx - 2, cy - 2, 4, '#56ad4c');
+    R(cx - 4, cy - 5, 2, 1, '#7fcf63'); R(cx - 2, cy - 6, 2, 1, '#7fcf63');
+    for (const [dx, dy] of [[-4, 0], [2, -4], [4, 1], [-1, 3], [0, -6], [5, -2]]) {
+      R(cx + dx, cy + dy, 2, 2, '#d62839'); R(cx + dx, cy + dy, 1, 1, '#ff7a85');
+    }
+  }
+}
+function desenharPas(t) {
+  if (!tem('moinho')) return;
+  const cx = 258, cy = 212, ang = t / 1500;
+  for (let p = 0; p < 4; p++) {
+    const a = ang + p * Math.PI / 2, dx = Math.cos(a), dy = Math.sin(a), px = -dy, py = dx;
+    for (let r = 2; r <= 22; r += 0.6) R(cx + dx * r, cy + dy * r, 1, 1, '#5c3d24');
+    for (let r = 6; r <= 22; r += 0.5) for (let o = 0.5; o <= 6; o += 0.5) {
+      const cor = (Math.round(r) % 4 === 0 || o > 5.6) ? '#8b6a45' : (o < 2 ? '#fffaf0' : '#efe2c4');
+      R(cx + dx * r + px * o, cy + dy * r + py * o, 1, 1, cor);
+    }
+  }
+  R(cx - 2, cy - 2, 4, 4, '#3a2416'); R(cx - 1, cy - 1, 2, 2, '#8b5a2b');
+}
+function fumaca(t) {
+  const fontes = [];
+  if (tem('casa')) fontes.push([217, 4, 1]);
+  if (tem('trator')) fontes.push([229, 88, 0.6]);
+  for (const [x, y, esc] of fontes) {
+    for (let i = 0; i < 4; i++) {
+      const f = ((t / 2200) + i / 4) % 1;
+      c.globalAlpha = 0.6 * (1 - f);
+      circulo(x + Math.sin(f * 5 + i) * 2 + f * 5, y - f * 16 * esc, Math.max(1, Math.round((1 + f * 3) * esc)), '#f2f2f2');
+    }
+    c.globalAlpha = 1;
+  }
+}
+
+// ---------- Animais ----------
+const SPR = {
+  galinha: (() => {
+    const A = ['......rr....', '.....wwww...', '.ww..wwkwy..', 'wwww.wwwwyy.', 'wwwwwwwwwr..', '.wwwssswwr..', '.swwwwwws...', '..sssssss...', '...l...l....', '...ll..ll...'];
+    const B = A.slice(0, 8).concat(['....l.l.....', '...ll.ll....']);
+    const C = ['............', '............', '.ww.........', 'wwww........', 'wwwwwwwwrr..', '.wwwssswwww.', '.swwwwwwwkwy', '..sssssss.ry', '...l...l....', '...ll..ll...'];
+    const base = { r: '#e43b44', y: '#f7b32b', k: '#1d1d1d', l: '#f08a24' };
+    return [
+      conjunto({ A, B, C }, { ...base, w: '#ffffff', s: '#d5d8e2' }, '#5b3a29'),
+      conjunto({ A, B, C }, { ...base, w: '#d9894a', s: '#b0652e' }, '#4a2a18'),
+    ];
+  })(),
+  pato: (() => {
+    const A = ['.......hhh..', '......hhhkh.', '......hhhhyy', '......nn....', '.b...bbbb...', 'bbbbbbbbbbb.', 'bbsssssbbbb.', '.bbbbbbbbb..'];
+    return [
+      conjunto({ A }, { h: '#ffffff', n: '#ffffff', b: '#f6f3ea', s: '#d7d2c2', y: '#f39c34', k: '#1d1d1d' }, '#3d4a5a'),
+      conjunto({ A }, { h: '#2f8a4f', n: '#ffffff', b: '#a98a6a', s: '#7d6248', y: '#f2c14e', k: '#1d1d1d' }, '#2e2a26'),
+    ];
+  })(),
+  porco: (() => {
+    const A = ['..........e....', '..ppppppppee...', '.pppppppppppkp.', '@ppppppppppppnn', '.ppppppppppppnm', '.dpppppppppppnn', '..ddddddddddd..', '..d.d.....d.d..', '..k.k.....k.k..'];
+    const B = A.slice(0, 7).concat(['...d.d...d.d...', '...k.k...k.k...']);
+    const C = ['..........e....', '..ppppppppee...', '@pppppppppppkp.', '.ppppppppppppnn', '.ppppppppppppnm', '.dpppppppppppnn', '..ddddddddddd..', '..d.d.....d.d..', '..k.k.....k.k..'];
+    return [conjunto({ A, B, C }, { p: '#f5a9bb', d: '#de889e', e: '#e48aa3', k: '#2a1a1e', n: '#f9c7d3', m: '#b0566e', '@': '#de889e' }, '#7a3e4e')];
+  })(),
+  ovelha: (() => {
+    const A = ['...w.ww.w.....', '.wwwwwwwww....', 'wwwwwwwwwwwff.', 'wwwwwwwwwwfkfe', 'wwwwwwwwwwffff', 'swwwwwwwwwwff.', '.sswwwwwsss...', '..l.l...l.l...', '..l.l...l.l...'];
+    const B = A.slice(0, 7).concat(['...l.l..l.l...', '...l.l..l.l...']);
+    const C = ['...w.ww.w.....', '.wwwwwwwww....', 'wwwwwwwwwww...', 'wwwwwwwwwwwe..', 'wwwwwwwwwwwff.', 'swwwwwwwwwffkf', '.sswwwwwssffff', '..l.l...l.lff.', '..l.l...l.l...'];
+    return [conjunto({ A, B, C }, { w: '#f8f6f0', s: '#dcd6c8', f: '#3b3433', k: '#ffffff', e: '#2a2423', l: '#3b3433' }, '#5f564d')];
+  })(),
+  vaca: (() => {
+    const A = ['..............h..h.', '.............ewwwwe', '.wwwbbwwwwwwwwwkwww', 'twwbbbwwwwwbbwwwwww', 'twwwbwwwwwbbbwwwppp', 'twwwwwwwwwwbwwwwpmp', 'bwwwwwbbwwwwwwwwppp', '.swwwbbbwwwwwwg....', '.sssssspppsssss....', '..ww.ww....ww.ww...', '..ww.ww....ww.ww...', '..kk.kk....kk.kk...'];
+    const B = A.slice(0, 9).concat(['...ww.ww..ww.ww....', '...ww.ww..ww.ww....', '...kk.kk..kk.kk....']);
+    const C = A.slice(0, 3).concat(['.wwbbbwwwwwbbwwwwww', 'twwwbwwwwwbbbwwwppp', 'twwwwwwwwwwbwwwwpmp', 'twwwwwbbwwwwwwwwppp', 'bswwwbbbwwwwwwg....'], A.slice(8));
+    return [conjunto({ A, B, C }, { w: '#fbfbf7', s: '#dcdcd2', b: '#2d2a28', t: '#fbfbf7', h: '#efe2b0', e: '#2d2a28', k: '#111111', p: '#f2a7b8', m: '#b0566e', g: '#f2c94c' }, '#3a3330')];
+  })(),
+};
+
+let animais = [];
+const LIMITES = { galinha: 10, pato: 8, porco: 6, ovelha: 7, vaca: 6 };
+const VELOCIDADE = { galinha: 11, pato: 5, porco: 5, ovelha: 5, vaca: 4 };
+const sorteia = (a, b) => a + Math.random() * (b - a);
+
+function posicaoAleatoria(tipo) {
+  if (tipo === 'pato') {
+    for (;;) {
+      const x = sorteia(LAGO.cx - LAGO.rx, LAGO.cx + LAGO.rx), y = sorteia(LAGO.cy - LAGO.ry, LAGO.cy + LAGO.ry);
+      if (dentroLago(x, y, -9)) return [x, y];
+    }
+  }
+  const a = tipo === 'galinha' ? AREAS.galinhas : AREAS.pasto;
+  return [sorteia(a.x1, a.x2), sorteia(a.y1, a.y2)];
+}
+function sincronizarAnimais() {
+  for (const tipo of Object.keys(LIMITES)) {
+    const desejado = Math.min(LIMITES[tipo], qtd(tipo));
+    const atuais = animais.filter(a => a.tipo === tipo);
+    for (let i = atuais.length; i < desejado; i++) {
+      const [x, y] = posicaoAleatoria(tipo), [tx, ty] = posicaoAleatoria(tipo);
+      const variantes = SPR[tipo].length;
+      animais.push({ tipo, x, y, tx, ty, dir: Math.random() < 0.5 ? 1 : -1, espera: Math.random() * 3, fase: Math.random() * 10, v: i % variantes, pulo: 0 });
+    }
+    if (atuais.length > desejado) {
+      const sobram = new Set(atuais.slice(desejado));
+      animais = animais.filter(a => !sobram.has(a));
+    }
+  }
+}
+function atualizarAnimais(dt) {
+  for (const a of animais) {
+    if (a.pulo > 0) a.pulo = Math.max(0, a.pulo - dt * 4);
+    if (a.espera > 0) {
+      a.espera -= dt;
+      if (a.tipo === 'galinha' && Math.random() < dt * 0.3) a.pulo = 1;
+      continue;
+    }
+    const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy);
+    const v = VELOCIDADE[a.tipo] * dt;
+    if (d <= v) {
+      a.x = a.tx; a.y = a.ty;
+      a.espera = 1 + Math.random() * (a.tipo === 'galinha' ? 2.5 : 5);
+      [a.tx, a.ty] = posicaoAleatoria(a.tipo);
+    } else {
+      a.x += dx / d * v; a.y += dy / d * v;
+      if (Math.abs(dx) > 0.5) a.dir = dx > 0 ? 1 : -1;
+    }
+  }
+}
+function desenharAnimal(a, t) {
+  const spr = SPR[a.tipo][a.v];
+  const andando = a.espera <= 0;
+  let q = 'A';
+  if (andando) q = (Math.floor(t / 160 + a.fase) % 2) ? 'B' : 'A';
+  else if (spr.C && Math.sin(t / (a.tipo === 'galinha' ? 140 : 900) + a.fase) > 0.2) q = 'C';
+  const quadro = (spr[q] || spr.A)[a.dir > 0 ? 'd' : 'e'];
+  const w = quadro.width, h = quadro.height;
+  const x = Math.round(a.x - w / 2);
+  let y = Math.round(a.y - h);
+  if (a.tipo === 'pato') {
+    y += Math.round(Math.sin(t / 400 + a.fase));
+    c.drawImage(quadro, x, y + 1);
+    const p = tem('lago') ? AGUA.limpa : AGUA.suja;
+    R(x + 1, Math.round(a.y) - 1, w - 2, 2, p.base);
+    R(x, Math.round(a.y) - 1, 2, 1, p.espuma); R(x + w - 2, Math.round(a.y) - 1, 2, 1, p.espuma);
+    return;
+  }
+  y -= Math.round(Math.sin(a.pulo * Math.PI) * 3);
+  elipse(Math.round(a.x), Math.round(a.y), Math.round(w / 2) - 1, 1, 'rgba(30,40,10,.25)');
+  c.drawImage(quadro, x, y);
+}
+
+// ---------- Ambiente: borboletas, abelhas, nuvens, partículas ----------
+function borboletas(t) {
+  if (!tem('cerca')) return;
+  for (const b of CENARIO.borboletas) {
+    const x = b.x + Math.sin(t / 2600 + b.f) * 34 + Math.sin(t / 700 + b.f * 2) * 6;
+    const y = b.y + Math.cos(t / 2100 + b.f) * 20 + Math.sin(t / 420 + b.f) * 3;
+    const aberta = Math.floor(t / 110 + b.f) % 2;
+    if (aberta) { R(x - 2, y, 2, 2, b.cor); R(x + 1, y, 2, 2, b.cor); }
+    else { R(x - 1, y - 1, 1, 2, b.cor); R(x + 1, y - 1, 1, 2, b.cor); }
+    R(x, y, 1, 2, '#3a2a1c');
+  }
+}
+function abelhas(t) {
+  if (!tem('colmeia')) return;
+  for (let i = 0; i < 9; i++) {
+    const x = 380 + Math.cos(t / (300 + i * 37) + i) * (12 + i % 4 * 3);
+    const y = 50 + Math.sin(t / (260 + i * 23) + i * 2) * (8 + i % 3 * 3);
+    R(x, y, 2, 1, '#f5c542'); R(x + 1, y, 1, 1, '#2a1a0a');
+    if (Math.floor(t / 60 + i) % 2) R(x, y - 1, 1, 1, '#ffffff');
+  }
+}
+function nuvens(t) {
+  for (const n of CENARIO.nuvens) {
+    const x = ((n.x + t / 1000 * n.v) % (W + 160)) - 80;
+    c.globalAlpha = 0.07;
+    elipse(x, n.y, n.rx, n.ry, '#0a1a30');
+    elipse(x + n.rx * 0.5, n.y - n.ry * 0.4, n.rx * 0.6, n.ry * 0.7, '#0a1a30');
+    c.globalAlpha = 1;
+  }
+}
+
+let particulas = [];
+function poeira(x, y, cores, n = 6, forca = 30, sobe = 15) {
+  for (let i = 0; i < n; i++) {
+    const ang = Math.random() * Math.PI * 2, v = Math.random() * forca;
+    particulas.push({ x, y, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - sobe, vida: 0.5 + Math.random() * 0.6, cor: cores[Math.floor(Math.random() * cores.length)], g: 60 });
+  }
+}
+function coracao(x, y) { particulas.push({ x, y, vx: 0, vy: -14, vida: 1.2, cor: 'coracao', g: 0 }); }
+function atualizarParticulas(dt) {
+  for (const p of particulas) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt; p.vida -= dt; }
+  particulas = particulas.filter(p => p.vida > 0);
+  if (particulas.length > 900) particulas.splice(0, particulas.length - 900);
+}
+function desenharParticulas() {
+  for (const p of particulas) {
+    c.globalAlpha = Math.min(1, p.vida * 2);
+    if (p.cor === 'coracao') {
+      R(p.x - 2, p.y, 2, 1, '#ff5a7a'); R(p.x + 1, p.y, 2, 1, '#ff5a7a'); R(p.x - 2, p.y + 1, 5, 1, '#ff5a7a'); R(p.x - 1, p.y + 2, 3, 1, '#ff5a7a'); R(p.x, p.y + 3, 1, 1, '#ff5a7a');
+      R(p.x - 1, p.y, 1, 1, '#ffb3c3');
+    } else R(p.x, p.y, 1, 1, p.cor);
+  }
+  c.globalAlpha = 1;
+}
+
+// ---------- Cena completa ----------
+function redesenharCaches() { desenharCamadaChao(); desenharCamadaTopo(); }
+
+function desenhar(t) {
+  c.drawImage(cacheChao, 0, 0);
+  desenharAgua(t);
+  for (const a of animais) if (a.tipo === 'pato') desenharAnimal(a, t);
+  taboas(t);
+  c.drawImage(cacheTopo, 0, 0);
+  desenharCenouras(t);
+  desenharTrigo(t);
+  desenharAboboras(t);
+  desenharMilho(t);
+  desenharPomar(t);
+  desenharPas(t);
+  animais.filter(a => a.tipo !== 'pato').sort((a, b) => a.y - b.y).forEach(a => desenharAnimal(a, t));
+  fumaca(t);
+  borboletas(t);
+  abelhas(t);
+  nuvens(t);
+  desenharParticulas();
+}
+
+// Onde cada compra "acontece" na fazenda (efeitos de poeira/brilho)
+function efeitoCompra(item) {
+  const brilho = ['#ffe066', '#ffffff', '#ffd93d'];
+  const em = (lista, cores, n) => lista.forEach(o => poeira(o.x, o.y - 3, cores, n));
+  switch (item.id) {
+    case 'mato': return em(CENARIO.mato, ['#4d6a28', '#6f8f34', '#a7c957'], 3);
+    case 'pedras': return em(CENARIO.pedras, ['#8d8d8d', '#bdbdbd', '#d9c9a3'], 5);
+    case 'lixo': return em([...CENARIO.lixo, ...CENARIO.galhos], ['#b0b7bf', '#f2efe6', '#6b4a2f', '#d9c9a3'], 4);
+    case 'entulho': return em([...CENARIO.entulho, ...CENARIO.matoOeste], ['#b5543c', '#9a7048', '#8d8d8d', '#d9c9a3'], 4);
+    case 'lago': return em(CENARIO.lixoLago.concat(CENARIO.algas), ['#e0f6ff', '#8fd0f5', '#ffffff'], 8);
+    case 'cerca':
+      for (let x = 6; x < 396; x += 16) { poeira(x, 6, ['#f0c58a', '#ffd93d'], 2); poeira(x, 252, ['#f0c58a', '#ffd93d'], 2); }
+      for (let y = 10; y < 250; y += 16) { poeira(4, y, ['#f0c58a'], 2); poeira(396, y, ['#f0c58a'], 2); }
+      return;
+    case 'mata':
+      for (let i = 0; i < 70; i++) poeira(sorteia(290, 396), sorteia(10, 250), ['#2c5228', '#4d8040', '#6b4a2f', '#d9c9a3'], 3, 40);
+      return;
+  }
+  const locais = {
+    cenoura: [158, 90], trigo: [158, 150], abobora: [158, 192], milho: [250, 160], pomar: [52, 100], morango: [52, 48],
+    galinha: [260, 96], pato: [50, 198], porco: [344, 170], ovelha: [344, 170], vaca: [344, 170],
+    poco: [147, 44], espantalho: [140, 225], moinho: [258, 225], celeiro: [328, 40], colmeia: [378, 54], casa: [202, 40],
+    galinheiro: [260, 45], ponte: [111, 124], estufa: [52, 36], trator: [224, 98],
+  };
+  const l = locais[item.id];
+  if (l) poeira(l[0], l[1], item.cat === 'limpeza' ? ['#d9c9a3', '#ffffff', '#ffe066'] : brilho, 26, 50);
+}
+
+// =====================================================================
+// INTERFACE
+// =====================================================================
+const $ = id => document.getElementById(id);
+const elMoedas = $('moedas'), elClique = $('porClique'), elSeg = $('porSegundo');
+const elAbas = $('abas'), elItens = $('itens'), wrap = $('fazendaWrap');
+let abaAtual = 'limpeza';
+
+function aviso(texto, grande) {
+  const d = document.createElement('div');
+  d.className = 'aviso' + (grande ? ' grande' : ''); d.textContent = texto;
+  $('avisos').appendChild(d);
+  setTimeout(() => d.remove(), 3800);
+  while ($('avisos').children.length > 3) $('avisos').firstChild.remove();
+}
+
+function atualizarLotes() {
+  for (const b of $('lotes').querySelectorAll('button')) b.classList.toggle('ativo', String(config.lote) === b.dataset.lote);
+}
+$('lotes').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  config.lote = b.dataset.lote === 'max' ? 'max' : Number(b.dataset.lote);
+  salvarConfig(); atualizarLotes(); atualizarLoja();
+});
+
+function montarAbas() {
+  elAbas.innerHTML = '';
+  for (const cat of CATEGORIAS) {
+    const b = document.createElement('button');
+    b.className = 'aba' + (cat.id === abaAtual ? ' ativa' : '');
+    b.dataset.cat = cat.id;
+    b.innerHTML = `${cat.nome}<span class="ponto"></span>`;
+    b.addEventListener('click', () => {
+      abaAtual = cat.id;
+      if (cat.id === 'conquistas') conquistaNaoVista = false;
+      montarAbas(); montarLoja();
+    });
+    if (cat.id === 'conquistas') b.title = 'Conquistas';
+    elAbas.appendChild(b);
+  }
+}
+function textoReq(item) {
+  return item.req.filter(([id, n]) => qtd(id) < n)
+    .map(([id, n]) => n > 1 ? `${n}× ${ITEM[id].nome}` : ITEM[id].nome).join(' + ');
+}
+function textoEfeito(item) {
+  const partes = [];
+  if (item.clique) partes.push(`+${fmt(item.clique)} por clique`);
+  if (item.porSeg) partes.push(item.unico ? `+${fmt(item.porSeg)}/s` : `+${fmt(item.porSeg)}/s cada`);
+  return partes.join(' · ');
+}
+// Ordem da lista: disponíveis no topo, depois bloqueados, depois mistérios;
+// itens únicos já comprados vão para a seção recolhida "Concluídos".
+let concluidosAberto = false;
+function cartaoItem(item) {
+  const b = document.createElement('button');
+  b.className = 'item';
+  b.dataset.id = item.id;
+  const feito = item.unico && tem(item.id);
+  const lib = liberado(item);
+  if (!lib && !visivel(item)) {
+    b.classList.add('bloqueado', 'misterio');
+    b.innerHTML = `<div class="ico">${item.ico}</div>
+      <div class="info"><div class="nome">???</div><div class="desc">Continue reconstruindo a fazenda para descobrir.</div></div>
+      <div class="preco">🔒</div>`;
+  } else if (!lib) {
+    b.classList.add('bloqueado');
+    b.innerHTML = `<div class="ico">${item.ico}</div>
+      <div class="info"><div class="nome">${item.nome}</div><div class="desc">🔒 Requer: ${textoReq(item)}</div>
+      <div class="efeito">${textoEfeito(item)}</div></div>
+      <div class="preco">🔒</div>`;
+  } else {
+    if (feito) b.classList.add('feito');
+    const q = !item.unico && qtd(item.id) ? `<span class="qtd">×${fmt(qtd(item.id))}</span>` : '';
+    b.innerHTML = `<div class="ico">${item.ico}</div>
+      <div class="info"><div class="nome">${item.nome}${q}</div><div class="desc">${item.desc}</div>
+      <div class="efeito">${textoEfeito(item)}</div></div>
+      <div class="preco">${feito ? '✔ Feito' : '🪙 ' + fmt(custoDe(item))}</div>`;
+    b.disabled = feito;
+    if (!feito) b.addEventListener('click', () => comprar(item));
+  }
+  return b;
+}
+function montarLoja() {
+  elItens.innerHTML = '';
+  $('lotes').classList.toggle('oculto', abaAtual === 'conquistas');
+  if (abaAtual === 'conquistas') { montarConquistas(); return; }
+  const itens = ITENS.filter(i => i.cat === abaAtual);
+  const concluidos = itens.filter(i => i.unico && tem(i.id));
+  const pendentes = itens.filter(i => !concluidos.includes(i));
+  const grupo = i => liberado(i) ? 0 : visivel(i) ? 1 : 2;
+  pendentes.sort((a, b) => grupo(a) - grupo(b)); // sort estável: mantém a ordem original dentro do grupo
+  for (const item of pendentes) elItens.appendChild(cartaoItem(item));
+  if (!pendentes.length) {
+    const vazio = document.createElement('div');
+    vazio.className = 'vazio';
+    vazio.textContent = '🎉 Tudo desta categoria já foi feito!';
+    elItens.appendChild(vazio);
+  }
+  if (concluidos.length) {
+    const d = document.createElement('details');
+    d.className = 'concluidos';
+    d.open = concluidosAberto;
+    d.addEventListener('toggle', () => { concluidosAberto = d.open; });
+    d.innerHTML = `<summary>✔ Concluídos (${concluidos.length})</summary>`;
+    const lista = document.createElement('div');
+    lista.className = 'lista-concluidos';
+    for (const item of concluidos) lista.appendChild(cartaoItem(item));
+    d.appendChild(lista);
+    elItens.appendChild(d);
+  }
+  atualizarLoja();
+}
+function atualizarLoja() {
+  for (const b of elItens.querySelectorAll('.item')) {
+    const item = ITEM[b.dataset.id];
+    if (b.classList.contains('bloqueado') || b.classList.contains('feito')) { b.disabled = true; continue; }
+    const n = loteDe(item), custo = custoLote(item, n), caro = !(estado.moedas >= custo);
+    b.classList.toggle('caro', caro);
+    b.disabled = caro;
+    // preço total do lote escolhido (só itens repetíveis mudam com o seletor)
+    const txt = '🪙 ' + fmt(custo) + (!item.unico && (n > 1 || config.lote === 'max') ? ` <small>×${n}</small>` : '');
+    const el = b.querySelector('.preco');
+    if (el.innerHTML !== txt) el.innerHTML = txt;
+  }
+  if (abaAtual === 'conquistas') atualizarConquistas();
+  for (const aba of elAbas.children) {
+    if (aba.dataset.cat === 'conquistas') { aba.querySelector('.ponto').classList.toggle('on', conquistaNaoVista); continue; }
+    const temCompra = ITENS.some(i => i.cat === aba.dataset.cat && liberado(i) && !(i.unico && tem(i.id)) && estado.moedas >= custoDe(i));
+    aba.querySelector('.ponto').classList.toggle('on', temCompra);
+  }
+}
+function montarConquistas() {
+  const feitas = CONQUISTAS.filter(cq => temConquista(cq.id)).length;
+  const bonus = Math.round((bonusConquistas() - 1) * 100);
+  const resumo = document.createElement('div');
+  resumo.className = 'resumo-conquistas';
+  resumo.innerHTML = `🏆 ${feitas} de ${CONQUISTAS.length} conquistas<small>Bônus atual: +${bonus}% de moedas por segundo</small>`;
+  elItens.appendChild(resumo);
+  for (const cq of CONQUISTAS) {
+    const ok = temConquista(cq.id);
+    const d = document.createElement('div');
+    d.className = 'cq ' + (ok ? 'ok' : 'trancada');
+    d.dataset.cq = cq.id;
+    d.innerHTML = `<div class="ico">${ok ? cq.ico : '🔒'}</div>
+      <div class="info"><div class="nome">${cq.nome}</div><div class="desc">${cq.desc}</div>
+      ${ok ? '' : '<div class="mini"><div></div></div><div class="prog"></div>'}</div>
+      <div class="bonus">+${cq.bonus}%</div>`;
+    elItens.appendChild(d);
+  }
+  atualizarConquistas();
+}
+function atualizarConquistas() {
+  for (const d of elItens.querySelectorAll('.cq.trancada')) {
+    const cq = CONQUISTAS.find(x => x.id === d.dataset.cq);
+    const [atual, alvo] = cq.prog();
+    const f = cq.tempo ? fmtTempo : fmt;
+    d.querySelector('.mini > div').style.width = Math.min(100, atual / alvo * 100) + '%';
+    d.querySelector('.prog').textContent = `${f(Math.min(atual, alvo))} / ${f(alvo)}`;
+  }
+}
+// Confere conquistas novas; "silencioso" é usado ao carregar o jogo
+function verificarConquistas(silencioso) {
+  const novas = CONQUISTAS.filter(cq => !temConquista(cq.id) && (() => { const [a, b] = cq.prog(); return a >= b; })());
+  if (!novas.length) return;
+  for (const cq of novas) estado.conquistas[cq.id] = Date.now();
+  if (silencioso) {
+    setTimeout(() => aviso(`🏆 Você já tinha ${novas.length} conquista${novas.length > 1 ? 's' : ''}! Veja na aba Conquistas.`), 900);
+  } else {
+    novas.forEach((cq, i) => setTimeout(() => {
+      avisoConquista(cq);
+      Som.conquista();
+    }, i * 700));
+  }
+  if (abaAtual === 'conquistas') montarLoja();
+  salvar();
+}
+function avisoConquista(cq) {
+  const d = document.createElement('div');
+  d.className = 'aviso conquista';
+  d.innerHTML = `🏆 Conquista desbloqueada: ${cq.ico} ${cq.nome}!<small>+${cq.bonus}% de moedas por segundo</small>`;
+  $('avisos').appendChild(d);
+  setTimeout(() => d.remove(), 3800);
+  while ($('avisos').children.length > 3) $('avisos').firstChild.remove();
+  if (abaAtual !== 'conquistas') conquistaNaoVista = true;
+}
+let conquistaNaoVista = false;
+
+// Contadores com o total de cada animal (na tela aparecem no máximo LIMITES[tipo])
+const GRUPOS_ROTULO = [
+  { x: 258, y: 121, tipos: ['galinha'] },                // na frente do galinheiro
+  { x: 50, y: 160, tipos: ['pato'] },                    // na margem do lago
+  { x: 340, y: 81, tipos: ['porco', 'ovelha', 'vaca'] }, // no alto do pasto
+];
+function atualizarRotulos() {
+  const el = $('rotulos');
+  el.innerHTML = '';
+  for (const g of GRUPOS_ROTULO) {
+    const tipos = g.tipos.filter(tem);
+    if (!tipos.length) continue;
+    const grupo = document.createElement('div');
+    grupo.className = 'grupo-rotulos';
+    grupo.style.left = (g.x / W * 100) + '%';
+    grupo.style.top = (g.y / H * 100) + '%';
+    for (const tipo of tipos) {
+      const r = document.createElement('div');
+      r.className = 'rotulo-animal';
+      r.textContent = `${ITEM[tipo].ico} ×${fmt(qtd(tipo))}`;
+      r.title = `${ITEM[tipo].nome}: ${fmt(qtd(tipo))}`;
+      grupo.appendChild(r);
+    }
+    el.appendChild(grupo);
+  }
+}
+function atualizarHUD() {
+  elMoedas.textContent = fmt(estado.moedas);
+  elClique.textContent = fmt(moedasPorClique());
+  elSeg.textContent = fmtTaxa(moedasPorSegundo());
+}
+function atualizarProgresso() {
+  const unicos = ITENS.filter(i => i.unico);
+  const pct = Math.round(unicos.filter(i => tem(i.id)).length / unicos.length * 100);
+  $('progTxt').textContent = pct + '%';
+  $('progBarra').style.width = pct + '%';
+}
+
+function comprar(item) {
+  Som.iniciar();
+  if (!liberado(item) || (item.unico && tem(item.id))) return;
+  const n = item.unico ? 1 : config.lote === 'max' ? maxAcessivel(item) : config.lote;
+  const custo = custoLote(item, Math.max(1, n));
+  if (n < 1 || estado.moedas < custo) { Som.erro(); aviso('Moedas insuficientes! 🪙'); return; }
+  estado.moedas -= custo;
+  estado.itens[item.id] = qtd(item.id) + n;
+
+  redesenharCaches();
+  efeitoCompra(item);
+  sincronizarAnimais();
+  atualizarRotulos();
+  if (item.grande) Som.fanfarra();
+  else if (item.cat === 'limpeza') Som.limpeza();
+  else Som.compra();
+  if (item.som) setTimeout(() => Som.animal(item.som), 250);
+
+  aviso(n > 1 ? `${item.ico} ${fmt(n)}× ${item.nome} comprados!` : (item.msg || `${item.nome} comprado!`), item.grande);
+  montarLoja();
+  atualizarHUD();
+  atualizarProgresso();
+  salvar();
+}
+
+// ---------- Clique na fazenda ----------
+let ultimoSomAnimal = 0;
+canvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  Som.iniciar();
+  const ganho = moedasPorClique();
+  ganhar(ganho);
+  estado.cliques++;
+
+  const rc = canvas.getBoundingClientRect(), rw = wrap.getBoundingClientRect();
+  const f = document.createElement('div');
+  f.className = 'flutua';
+  f.textContent = '+' + fmt(ganho);
+  f.style.left = (e.clientX - rw.left) + 'px';
+  f.style.top = (e.clientY - rw.top) + 'px';
+  wrap.appendChild(f);
+  setTimeout(() => f.remove(), 900);
+
+  const cx = (e.clientX - rc.left) / rc.width * W, cy = (e.clientY - rc.top) / rc.height * H;
+  poeira(cx, cy, ['#ffe066', '#ffd93d', '#fff6b0'], 5, 35);
+
+  // clicou num animal? ele responde!
+  const alvo = animais.find(a => Math.abs(a.x - cx) < 8 && cy < a.y + 2 && cy > a.y - 14);
+  if (alvo && performance.now() - ultimoSomAnimal > 350) {
+    ultimoSomAnimal = performance.now();
+    Som.animal(alvo.tipo);
+    coracao(alvo.x, alvo.y - 16);
+    if (alvo.tipo === 'galinha') alvo.pulo = 1;
+  } else Som.clique();
+
+  if (estado.cliques === 10) $('dica').textContent = '🛒 Use as moedas na loja para limpar e reconstruir a fazenda!';
+  atualizarHUD();
+});
+
+// ---------- Botões de som ----------
+function atualizarBotoesSom() {
+  $('btnMusica').classList.toggle('desligado', !config.musica);
+  $('btnEfeitos').classList.toggle('desligado', !config.efeitos);
+  $('btnMusica').firstChild.textContent = config.musica ? '🎵 ' : '🔇 ';
+  $('btnEfeitos').firstChild.textContent = config.efeitos ? '🔊 ' : '🔈 ';
+}
+$('btnMusica').addEventListener('click', () => {
+  config.musica = !config.musica; salvarConfig(); Som.iniciar(); Som.ajustar(); atualizarBotoesSom();
+});
+$('btnEfeitos').addEventListener('click', () => {
+  config.efeitos = !config.efeitos; salvarConfig(); Som.iniciar(); Som.ajustar(); atualizarBotoesSom();
+  if (config.efeitos) Som.clique();
+});
+// o navegador só libera o áudio depois de uma interação
+document.addEventListener('pointerdown', () => Som.iniciar());
+document.addEventListener('keydown', () => Som.iniciar());
+
+// ---------- Reiniciar ----------
+$('btnReiniciar').addEventListener('click', () => $('modal').classList.add('aberto'));
+$('btnCancelar').addEventListener('click', () => $('modal').classList.remove('aberto'));
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal') $('modal').classList.remove('aberto'); });
+$('btnConfirmar').addEventListener('click', () => {
+  try { localStorage.removeItem(CHAVE_SAVE); } catch (e) {}
+  estado = novoEstado();
+  animais = []; particulas = [];
+  abaAtual = 'limpeza';
+  conquistaNaoVista = false;
+  $('modal').classList.remove('aberto');
+  $('dica').textContent = '👆 Clique na fazenda para ganhar moedas e começar a reconstrução!';
+  redesenharCaches();
+  montarAbas(); montarLoja(); atualizarHUD(); atualizarProgresso(); atualizarRotulos(); salvar();
+  aviso('A fazenda voltou ao começo. Boa sorte! 🌱');
+});
+
+// =====================================================================
+// LOOP PRINCIPAL
+// =====================================================================
+carregar();
+{
+  // ganhos enquanto o jogador esteve fora (até 2 horas)
+  const fora = Math.min(Date.now() - (estado.salvoEm || Date.now()), 2 * 3600 * 1000) / 1000;
+  const ganho = moedasPorSegundo() * fora;
+  if (ganho >= 1) {
+    ganhar(ganho);
+    setTimeout(() => aviso(`Enquanto você esteve fora, a fazenda rendeu 🪙 ${fmt(ganho)}!`), 400);
+  }
+}
+if (estado.cliques >= 10) $('dica').textContent = '🛒 Use as moedas na loja para limpar e reconstruir a fazenda!';
+redesenharCaches();
+sincronizarAnimais();
+atualizarRotulos();
+montarAbas();
+montarLoja();
+atualizarHUD();
+atualizarProgresso();
+atualizarBotoesSom();
+atualizarLotes();
+verificarConquistas(true);
+
+let ultimoQuadro = performance.now();
+let ultimaRenda = Date.now();
+let ultimaLoja = 0;
+let ultimaConquista = 0;
+let ultimoQuadroTempo = performance.now();
+let proximoSomAmbiente = performance.now() + 8000;
+function quadro(t) {
+  const dt = Math.min(0.1, (t - ultimoQuadro) / 1000);
+  ultimoQuadro = t;
+
+  // a renda usa o relógio real, então nada se perde com a aba em segundo plano
+  const agora = Date.now();
+  ganhar(moedasPorSegundo() * (agora - ultimaRenda) / 1000);
+  ultimaRenda = agora;
+  estado.tempoJogo += Math.min(1, (t - ultimoQuadroTempo) / 1000); // só conta com a página aberta
+  ultimoQuadroTempo = t;
+  if (t - ultimaConquista > 500) { verificarConquistas(); ultimaConquista = t; }
+
+  // sons ambientes: animais e passarinhos de vez em quando
+  if (t > proximoSomAmbiente) {
+    proximoSomAmbiente = t + 9000 + Math.random() * 14000;
+    const tipos = Object.keys(LIMITES).filter(tem);
+    if (tipos.length && Math.random() < 0.7) Som.animal(tipos[Math.floor(Math.random() * tipos.length)], 0.45);
+    else if (tem('cerca')) Som.passarinho(0.035);
+  }
+
+  atualizarAnimais(dt);
+  atualizarParticulas(dt);
+  desenhar(t);
+  atualizarHUD();
+  if (t - ultimaLoja > 200) { atualizarLoja(); ultimaLoja = t; }
+  requestAnimationFrame(quadro);
+}
+requestAnimationFrame(quadro);
+
+setInterval(salvar, 5000);
+window.addEventListener('beforeunload', salvar);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { salvar(); if (Som.ctx) Som.ctx.suspend(); }
+  else if (Som.ctx) Som.ctx.resume();
+});
+})();
+</script>
+</body>
+</html>
