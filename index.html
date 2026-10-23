@@ -122,7 +122,7 @@
 
   /* Faixa de avisos: fixa no topo da área do jogo, discreta e semitransparente (um aviso de cada vez) */
   .ceu {
-    position: absolute; left: 8px; right: 8px; top: 8px; z-index: 6; pointer-events: none;
+    position: absolute; left: 8px; right: 8px; top: 8px; z-index: 9; pointer-events: none;
     min-height: 26px; padding: 4px 12px; border-radius: 8px 8px 0 0;
     background: rgba(38, 24, 10, .52); color: #fff8e7; text-align: center;
     font-size: clamp(11px, 1.3vw, 15px); line-height: 1.3; text-shadow: 1px 1px 0 rgba(0,0,0,.45);
@@ -328,7 +328,7 @@
   .medalha.bronze { background: #b87333; } .medalha.prata { background: #8d98a6; } .medalha.ouro { background: #c99a2e; }
 
   /* Mina */
-  .mina { position: absolute; left: 8px; right: 8px; top: 8px; aspect-ratio: 800 / 560; background: #2a1d14; border-radius: 8px; display: flex; flex-direction: column; z-index: 8; }
+  .mina { position: absolute; left: 8px; right: 8px; top: 8px; background: #2a1d14; border-radius: 8px; display: flex; flex-direction: column; z-index: 8; }
   .mina-topo { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 10px; color: #fff3dc; font-weight: bold; background: #3d2a1c; border-radius: 8px 8px 0 0; }
   .mina-topo .esp { flex: 1; }
   .mina-topo .minerios { font-size: 13px; font-weight: normal; }
@@ -3885,6 +3885,21 @@ function proximaMsgCeu() {
   const dur = filaCeu.length > 3 ? Math.min(m.dur, 2200) : m.dur;
   setTimeout(() => { d.classList.add('saindo'); setTimeout(proximaMsgCeu, 280); }, dur);
 }
+// Com a mina ou a pesca aberta, a faixa de avisos fica logo abaixo da barra delas
+function posicionarFaixa() {
+  const ov = !$('mina').hidden ? $('mina') : !$('pesca').hidden ? $('pesca') : null;
+  const top = ov ? (8 + ov.querySelector('.mina-topo').offsetHeight) + 'px' : '8px';
+  if ($('ceu').style.top !== top) $('ceu').style.top = top;
+  $('ceu').style.borderRadius = ov ? '0' : '';
+  // em telas estreitas a barra da mina/pesca quebra em várias linhas: o painel cresce para a cena não achatar
+  for (const id of ['mina', 'pesca']) {
+    const o = $(id); if (o.hidden) continue;
+    const h = Math.max(canvas.clientHeight, o.querySelector('.mina-topo').offsetHeight + o.clientWidth * 200 / 320);
+    if (o.style.height !== h + 'px') o.style.height = h + 'px';
+  }
+  const alt = ov ? (ov.offsetHeight + 8) + 'px' : '';
+  if (wrap.style.minHeight !== alt) wrap.style.minHeight = alt;
+}
 function ajustarCeu() {
   const h = canvas.clientHeight + 'px';
   $('rotulos').style.height = h;
@@ -4171,11 +4186,13 @@ function montarLoja() {
     const abrigoPrimeiro = (a, b) => (b.abrigo ? 1 : 0) - (a.abrigo ? 1 : 0);
     const pend = its.filter(i => st.get(i) && st.get(i) !== 'feito').sort((a, b) => abaLoja === 'animais' ? abrigoPrimeiro(a, b) || ordem[st.get(a)] - ordem[st.get(b)] : ordem[st.get(a)] - ordem[st.get(b)]);
     const mostrarCab = g && (pend.length || (abaLoja === 'plantacoes' && g === 'estufa' && tierLinha('estufa')) || (abaLoja === 'animais' && qtd(g) > 0));
-    if (!mostrarCab) continue;
-    const cab = el('div', 'grupo-loja', cabecalhoGrupo(abaLoja, g));
-    cab.dataset.grupo = g;
-    if (abaLoja === 'animais' && ABRIGOS[g] && qtd(g) > capAbrigo(g)) cab.classList.add('frio');
-    lista.appendChild(cab);
+    if (g && !mostrarCab) continue;
+    if (g) { // categorias sem grupos (construções, ferramentas, decoração) vão direto para a lista
+      const cab = el('div', 'grupo-loja', cabecalhoGrupo(abaLoja, g));
+      cab.dataset.grupo = g;
+      if (abaLoja === 'animais' && ABRIGOS[g] && qtd(g) > capAbrigo(g)) cab.classList.add('frio');
+      lista.appendChild(cab);
+    }
     for (const i of pend) { lista.appendChild(cartaoItem(i, st.get(i))); algum = true; }
   }
   if (!algum) lista.appendChild(el('div', 'vazio', '🎉 Nada pendente nesta categoria por enquanto!'));
@@ -4680,7 +4697,7 @@ function abrirFinal() {
 // =====================================================================
 // TUTORIAL (só avança quando a ação está feita; o balão nunca cobre o alvo)
 // =====================================================================
-const tutorial = { arrastou: false, vistoObjetivo: false, minaAberta: false, pescaAberta: false };
+const tutorial = { arrastou: false, vistoObjetivo: false, minaAberta: false, vistoMina: false, pescaAberta: false };
 function alvoItem(id) {
   if ($('principal').classList.contains('sem-lateral')) return $('btnLateral');
   if (painelAtual !== 'loja') return $('paineis').querySelector('[data-p=loja]');
@@ -4692,19 +4709,51 @@ function alvoPainel(p, dentro) {
   if (painelAtual !== p) return $('paineis').querySelector(`[data-p=${p}]`);
   return dentro ? dentro() : null;
 }
+// O que ainda falta para poder comprar um item (null = já dá para comprar agora)
+function faltaPara(id) {
+  const it = ITEM[id];
+  if (temOuObra(id) || maxAcessivel(it) > 0) return null;
+  if (it.nivel > estado.nivel) return { tipo: 'nivel', txt: `Ele libera no nível ${it.nivel}: complete as metas lá em cima.` };
+  if (!reqOk(it)) return { tipo: 'req', id: it.req.find(([r, n]) => qtd(r) < n && !emObra(r))?.[0], txt: `Antes, precisa de: ${textoReq(it)}.` };
+  if (!temMinerios(it)) {
+    const f = Object.entries(it.minerios).filter(([m, n]) => (estado.minerios[m] || 0) < n).map(([m, n]) => `${MINERIOS[m].ico} ${n - (estado.minerios[m] || 0)} de ${MINERIOS[m].nome.toLowerCase()}`).join(' e ');
+    return { tipo: 'minerio', txt: `Faltam minérios: ${f}. ${tem('minaEntrada') ? 'Pegue na ⛏️ mina.' : 'Eles saem da mina.'}` };
+  }
+  const custo = it.repetivel ? custoDe(it) : it.custo;
+  if (estado.moedas < custo) return { tipo: 'moedas', txt: `Faltam 🪙 ${fmt(custo - estado.moedas)} (custa ${fmt(custo)}). Clique na fazenda ou espere a produção.` };
+  return { tipo: 'outro', txt: 'Ainda não dá para comprar.' };
+}
+// Passo de compra: só aponta o botão quando dá para comprar; senão explica o que falta e espera
+function passoCompra(id, txt, extra) {
+  return Object.assign({
+    txt: () => { const f = faltaPara(id); return f ? `${txt}<br><small>⏳ <b>Ainda não dá:</b> ${f.txt}</small>` : txt; },
+    alvo: () => {
+      const f = faltaPara(id);
+      if (!f) return alvoItem(id);
+      if (f.tipo === 'moedas') return canvas;
+      if (f.tipo === 'minerio' && tem('minaEntrada')) return $('btnMina');
+      if (f.tipo === 'req' && f.id && !faltaPara(f.id)) return alvoItem(f.id);
+      return $('objetivo');
+    },
+    feito: () => temOuObra(id),
+  }, extra || {});
+}
 const PASSOS = [
   { txt: '👆 <b>Clique na fazenda</b> para ganhar moedas! Para mover a câmera, é só arrastar.', alvo: () => canvas, feito: () => estado.cliques >= 8 },
-  { txt: '🧹 Agora compre <b>“Arrancar o mato”</b> na Loja.', alvo: () => alvoItem('mato'), feito: () => temOuObra('mato') },
+  passoCompra('mato', '🧹 Agora compre <b>“Arrancar o mato”</b> na Loja.'),
   { txt: '🔨 Limpezas e construções viram <b>obras</b> e levam um tempinho. Dá para ter várias ao mesmo tempo, e <b>cada clique na fazenda adianta as obras!</b>', alvo: () => canvas, feito: () => tem('mato') },
   { txt: '⭐ Este é o <b>objetivo do próximo nível</b>. Complete as metas para subir e liberar áreas novas!', alvo: () => $('objetivo'), botao: 'Entendi', feito: () => tutorial.vistoObjetivo },
-  { txt: '🥕 Tire as pedras e <b>plante um canteiro de cenoura</b>.', alvo: () => !temOuObra('pedras') ? alvoItem('pedras') : tem('pedras') ? alvoItem('cenoura') : canvas, feito: () => qtd('cenoura') >= 1 },
+  passoCompra('pedras', '🪨 Compre <b>“Tirar as pedras”</b> para abrir espaço para a horta.'),
+  passoCompra('cenoura', '🥕 Assim que as pedras saírem, <b>plante um canteiro de cenoura</b>.', { feito: () => qtd('cenoura') >= 1 }),
   { txt: '🗺️ A fazenda é grande! <b>Arraste</b> o cenário para olhar em volta, ou use <b>“Ver fazenda inteira”</b>.', alvo: () => $('btnVerTudo'), feito: () => tutorial.arrastou },
   { quando: () => estado.nivel >= 2, txt: '🌟 Você subiu de nível e ganhou <b>pontos de habilidade</b>! Abra ⭐ Habilidades e desbloqueie uma.', alvo: () => alvoPainel('habilidades', () => conteudo.querySelector('[data-desb]') || conteudo.querySelector('.no.disponivel')), feito: () => habilidadesTotal() >= 1 },
-  { quando: () => estado.nivel >= 2 && estado.moedas >= ITEM.minaEntrada.custo, txt: '⛏️ Tem uma <b>mina</b> desmoronada no paredão atrás da casa! Compre <b>“Escorar a entrada da mina”</b> (aba Limpeza).', alvo: () => alvoItem('minaEntrada'), feito: () => temOuObra('minaEntrada') },
-  { quando: () => tem('minaEntrada'), txt: '⛏️ A mina abriu! Entre nela e <b>quebre as pedras</b>: os minérios melhoram as ferramentas. Ache a escada para descer mais fundo.', alvo: () => $('btnMina'), feito: () => tutorial.minaAberta },
-  { quando: () => estado.nivel >= 2 && estado.moedas >= ITEM.vara1.custo, txt: '🎣 Compre a <b>vara de pesca de madeira</b> (aba Ferramentas) para pescar no rio.', alvo: () => alvoItem('vara1'), feito: () => tem('vara1') },
+  passoCompra('minaEntrada', '⛏️ Tem uma <b>mina</b> desmoronada no paredão atrás da casa! Compre <b>“Escorar a entrada da mina”</b> (aba Limpeza).', { quando: () => estado.nivel >= 2 }),
+  { quando: () => tem('minaEntrada'), txt: () => `⛏️ A mina abriu! Entre nela e <b>quebre as pedras</b> para achar minérios e a escada. Os andares vão sendo liberados conforme a fazenda evolui: por enquanto ela vai até o andar ${andarMaximo()}.`, alvo: () => $('btnMina'), feito: () => tutorial.minaAberta },
+  { naMina: true, quando: () => mina.aberta, txt: () => `⛏️ Clique nas pedras para quebrar. Minérios brilham na rocha. Ache a <b>escada</b> para descer.<br>🚧 Hoje a mina vai até o <b>andar ${andarMaximo()}</b>; ${requisitoProximoAndar() ? `o andar ${requisitoProximoAndar().andar} abre ${textoRequisito(requisitoProximoAndar())}` : 'você já pode ir até o fundo'}. No último andar liberado não há escada: a passagem fica bloqueada.`, alvo: () => $('minaAndar'), botao: 'Entendi', feito: () => tutorial.vistoMina || (tutorial.minaAberta && !mina.aberta) },
+  passoCompra('vara1', '🎣 Compre a <b>vara de pesca de madeira</b> (aba Ferramentas) para pescar no rio.', { quando: () => estado.nivel >= 2 }),
   { quando: () => tem('vara1'), txt: '🎣 Abra a <b>pesca</b>: lance a linha, espere o peixe morder e segure o botão para manter o peixe dentro da faixa verde!', alvo: () => $('btnPesca'), feito: () => tutorial.pescaAberta || totalPescado() > 0 },
-  { quando: () => vagasEquipe() > 0, txt: '👥 Agora dá para <b>contratar um ajudante</b>! Abra a Equipe.', alvo: () => alvoPainel('equipe', () => conteudo.querySelector('[data-contratar]')), feito: () => estado.equipe.length >= 1 },
+  { quando: () => vagasEquipe() > 0, txt: () => `👥 Agora dá para <b>contratar um ajudante</b>! Abra a Equipe.${estado.moedas < custoContrato() ? `<br><small>⏳ <b>Ainda não dá:</b> faltam 🪙 ${fmt(custoContrato() - estado.moedas)} para contratar.</small>` : ''}`,
+    alvo: () => estado.moedas < custoContrato() ? canvas : alvoPainel('equipe', () => conteudo.querySelector('[data-contratar]')), feito: () => estado.equipe.length >= 1 },
 ];
 const balao = $('balao');
 let alvoTutorial = null;
@@ -4716,17 +4765,18 @@ function passoAtual() {
   return p;
 }
 function atualizarTutorial() {
-  const p = modal.classList.contains('aberto') || !$('mina').hidden || !$('pesca').hidden ? null : passoAtual();
+  let p = modal.classList.contains('aberto') || !$('pesca').hidden ? null : passoAtual();
+  if (p && !$('mina').hidden !== !!p.naMina) p = null; // dentro da mina, só os passos da mina
   const alvo = p ? p.alvo() : null;
   if (alvoTutorial && alvoTutorial !== alvo) alvoTutorial.classList.remove('alvo-tutorial');
   alvoTutorial = alvo;
   if (!p || !alvo || !alvo.getClientRects().length) { balao.hidden = true; return; }
   if (alvo !== canvas) alvo.classList.add('alvo-tutorial');
-  const html = `${p.txt}<div class="acoes-balao">${p.botao ? `<button class="btn mini verde" data-ok>${p.botao}</button>` : ''}<button class="btn mini" data-pular>Pular tutorial</button></div><div class="seta"></div>`;
+  const html = `${typeof p.txt === 'function' ? p.txt() : p.txt}<div class="acoes-balao">${p.botao ? `<button class="btn mini verde" data-ok>${p.botao}</button>` : ''}<button class="btn mini" data-pular>Pular tutorial</button></div><div class="seta"></div>`;
   if (balao.dataset.html !== html) {
     balao.innerHTML = html; balao.dataset.html = html;
     const ok = balao.querySelector('[data-ok]');
-    if (ok) ok.onclick = () => { tutorial.vistoObjetivo = true; atualizarTutorial(); };
+    if (ok) ok.onclick = () => { if (p.naMina) tutorial.vistoMina = true; else tutorial.vistoObjetivo = true; atualizarTutorial(); };
     balao.querySelector('[data-pular]').onclick = () => { estado.tutorial.pulou = true; balao.hidden = true; if (alvoTutorial) alvoTutorial.classList.remove('alvo-tutorial'); };
   }
   balao.hidden = false;
@@ -4860,7 +4910,7 @@ const MW = 320, MH = 200, COLS = 10, LINS = 6, CEL = 32, OFY = 4;
 const HP_ROCHA = { pedra: 3, cobre: 4, ferro: 6, prata: 9, ouro: 13, diamante: 18 };
 const mina = { aberta: false, andar: 1, celulas: [], escada: false, tremor: {}, pops: [] };
 
-function gerarAndar() {
+function gerarAndar(mesmoAndar) {
   mina.celulas = [];
   mina.escada = false;
   const pesos = minerioDoAndar(mina.andar);
@@ -4873,8 +4923,36 @@ function gerarAndar() {
   if (mina.andar < andarMaximo()) {
     const cands = mina.celulas.filter(c => c.tipo);
     escolhe(cands).escada = true;
+  } else if (mina.andar < ANDAR_FUNDO) {
+    // último andar liberado: a passagem para baixo está bloqueada com tábuas e uma placa
+    Object.assign(mina.celulas[CEL_BLOQUEIO], { tipo: null, hp: 0, max: 0, bloqueio: true });
+    for (const k of [CEL_BLOQUEIO - COLS, CEL_BLOQUEIO + COLS]) Object.assign(mina.celulas[k], { tipo: null, hp: 0, max: 0, escada: false }); // espaço para a placa
+    if (mina.aberta && !mesmoAndar) setTimeout(() => avisar(textoUltimoAndar(), 'alerta', 7000), 300);
   }
   atualizarTopoMina();
+}
+const ANDAR_FUNDO = 12, CEL_BLOQUEIO = 4 * COLS + 4;
+// O que falta para abrir o próximo andar: um nível da fazenda, uma picareta melhor, ou os dois
+function requisitoProximoAndar() {
+  const max = andarMaximo(), prox = max + 1;
+  if (max >= ANDAR_FUNDO) return null;
+  let nivel = null;
+  for (let n = estado.nivel + 1; n <= NIVEL_MAX; n++) if ((ANDARES_POR_NIVEL[n] || 0) >= prox) { nivel = n; break; }
+  let limNivel = 0;
+  for (const n in ANDARES_POR_NIVEL) if (estado.nivel >= Number(n)) limNivel = Math.max(limNivel, ANDARES_POR_NIVEL[n]);
+  if (limNivel >= prox) nivel = null; // o nível já permite: falta só a picareta
+  const picareta = dadoLinha('picareta').fundo < prox ? LINHAS.picareta.find(p => p && p.fundo >= prox) : null;
+  return { andar: prox, nivel, picareta };
+}
+function textoRequisito(r, curto) {
+  const partes = [];
+  if (r.nivel) partes.push(curto ? `no nível ${r.nivel}` : `no nível ${r.nivel} da fazenda`);
+  if (r.picareta) partes.push(curto ? r.picareta.nome.toLowerCase() : `com a ${r.picareta.nome.toLowerCase()}`);
+  return partes.join(curto ? ' + ' : ' e ');
+}
+function textoUltimoAndar() {
+  const r = requisitoProximoAndar();
+  return r ? `🚧 <b>Este é o andar mais fundo liberado por enquanto.</b> Os próximos andares abrem ${textoRequisito(r)}.` : '⛏️ Você chegou ao fundo da mina!';
 }
 function abrirMina() {
   if (!tem('minaEntrada')) return;
@@ -4888,11 +4966,19 @@ function abrirMina() {
 }
 function fecharMina() { mina.aberta = false; $('mina').hidden = true; }
 function atualizarTopoMina() {
+  const bl = mina.celulas[CEL_BLOQUEIO];
+  if (bl && bl.bloqueio && mina.andar < andarMaximo()) { // subiu de nível (ou picareta nova) com a mina aberta: a passagem abre
+    bl.bloqueio = false; bl.escada = true; mina.escada = true;
+    avisar('🪜 A passagem abriu! Já dá para descer mais um andar.', 'nivel', 4000);
+  }
   const p = dadoLinha('picareta');
-  $('minaAndar').textContent = `⛏️ Andar ${mina.andar} de ${andarMaximo()} · ${p.nome} (força ${p.forca})`;
+  const r = requisitoProximoAndar();
+  $('minaAndar').textContent = `⛏️ Andar ${mina.andar} de ${andarMaximo()} · ` + (r ? `andar ${r.andar} libera ${textoRequisito(r, true)}` : 'fundo da mina');
+  $('minaAndar').title = `${p.nome}: força ${p.forca}, desce até o andar ${p.fundo}`;
   $('minaMinerios').innerHTML = Object.keys(MINERIOS).filter(m => estado.minerios[m]).map(m => `${MINERIOS[m].ico} ${fmt(estado.minerios[m])}`).join(' · ') || 'Nenhum minério ainda';
-  $('minaDescer').disabled = !(mina.escada && mina.andar < andarMaximo());
-  $('minaDescer').textContent = mina.escada ? '⬇️ Descer' : '⬇️ Descer (ache a escada)';
+  const ultimo = mina.andar >= andarMaximo();
+  $('minaDescer').disabled = !(mina.escada && !ultimo);
+  $('minaDescer').textContent = ultimo ? '🚧 Último andar liberado' : mina.escada ? '⬇️ Descer' : '⬇️ Descer (ache a escada)';
   $('minaSubir').disabled = mina.andar <= 1;
   // no andar do lago subterrâneo dá para pescar
   const lago = $('minaLago');
@@ -4920,6 +5006,7 @@ minaCanvas.addEventListener('pointerdown', e => {
   const col = Math.floor(x / CEL), lin = Math.floor(y / CEL);
   if (col < 0 || col >= COLS || lin < 0 || lin >= LINS) return;
   const i = lin * COLS + col, cel = mina.celulas[i];
+  if (cel.bloqueio) { avisar(textoUltimoAndar(), 'alerta', 6000); Som.erro(); return; }
   if (!cel.tipo || cel.hp <= 0) return;
   cel.hp -= dadoLinha('picareta').forca;
   mina.tremor[i] = performance.now();
@@ -4936,8 +5023,8 @@ minaCanvas.addEventListener('pointerdown', e => {
     mina.pops.push({ x: cx, y: cy, texto: `+1 ${MINERIOS[cel.tipo].ico}`, vy: -20, vx: 0, vida: 1.2 });
     Som.picareta(true, true);
   }
-  if (cel.escada) { mina.escada = true; avisar(mina.andar < andarMaximo() ? '🪜 Você achou a escada para o próximo andar!' : (andarMaximo() < 12 ? `🪜 O andar ${mina.andar} é o mais fundo por enquanto: ${dadoLinha('picareta').fundo <= mina.andar ? 'melhore a picareta' : 'suba de nível'} para descer mais.` : '🪜 Você chegou ao fundo da mina!'), '', 2500); }
-  if (mina.celulas.every(c => !c.tipo || c.hp <= 0)) { avisar('⛏️ Andar todo quebrado! Novas rochas apareceram.', '', 2500); setTimeout(gerarAndar, 600); }
+  if (cel.escada) { mina.escada = true; Som.sino(); avisar('🪜 Você achou a escada para o próximo andar!', '', 2500); }
+  if (mina.celulas.every(c => !c.tipo || c.hp <= 0)) { avisar('⛏️ Andar todo quebrado! Novas rochas apareceram.', '', 2500); setTimeout(() => gerarAndar(true), 600); }
   atualizarTopoMina();
 });
 
@@ -4951,6 +5038,16 @@ function desenharMina(t, dt) {
     mina.celulas.forEach((cel, i) => {
       const col = i % COLS, lin = Math.floor(i / COLS);
       let x = col * CEL, y = lin * CEL + OFY;
+      if (cel.bloqueio) { // buraco para baixo tapado com tábuas, entulho e placa
+        elipse(x + 16, y + 20, 13, 9, '#0a0604');
+        for (let k = 0; k < 3; k++) R(x + 3, y + 13 + k * 5, 26, 3, k % 2 ? '#8b5a2b' : '#a0703f');
+        for (let k = 0; k < 26; k++) R(x + 3 + k, y + 12 + Math.round(k * 0.5), 1, 2, '#6e4426');
+        for (const [dx, dy] of [[2, 26], [24, 25], [12, 28]]) elipse(x + dx + 2, y + dy, 3, 2, '#7d6e5e');
+        R(x + 15, y - 2, 2, 12, '#5c3d24'); R(x + 6, y - 3, 20, 9, '#e9c46a'); R(x + 6, y - 3, 20, 1, '#fff0a0');
+        for (let k = 0; k < 20; k += 5) R(x + 7 + k, y + 4, 3, 1, '#3a2a1a');
+        R(x + 15, y - 1, 2, 4, '#c0392b'); R(x + 15, y + 4, 2, 1, '#c0392b');
+        return;
+      }
       if (!cel.tipo || cel.hp <= 0) {
         if (cel.escada) { // escada de madeira no chão
           R(x + 9, y + 4, 3, 24, '#8b5a2b'); R(x + 20, y + 4, 3, 24, '#8b5a2b');
@@ -4975,6 +5072,13 @@ function desenharMina(t, dt) {
       if (dano > 0.2) { R(x + 10, y + 12, 1, 6, '#2a2018'); R(x + 11, y + 17, 4, 1, '#2a2018'); }
       if (dano > 0.5) { R(x + 18, y + 9, 1, 8, '#2a2018'); R(x + 19, y + 16, 5, 1, '#2a2018'); R(x + 14, y + 22, 6, 1, '#2a2018'); }
     });
+    const bl = mina.celulas[CEL_BLOQUEIO];
+    if (bl && bl.bloqueio) { // o aviso vai por cima das pedras vizinhas
+      const x = (CEL_BLOQUEIO % COLS) * CEL, y = Math.floor(CEL_BLOQUEIO / COLS) * CEL + OFY;
+      mctx.font = 'bold 9px Trebuchet MS, sans-serif'; mctx.textAlign = 'center';
+      mctx.fillStyle = 'rgba(0,0,0,.6)'; mctx.fillRect(x - 30, y + 34, 92, 12);
+      mctx.fillStyle = '#ffd84a'; mctx.fillText('🚧 Passagem bloqueada', x + 16, y + 43);
+    }
     // luz do lampião (escurece as bordas)
     const g = mctx.createRadialGradient(MW / 2, MH / 2, 60, MW / 2, MH / 2, 200);
     g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${0.35 + prof * 0.35})`);
@@ -5387,7 +5491,7 @@ $('btnReiniciar').addEventListener('click', () => abrirConfirmacao('🔄 Reinici
   estado = novoEstado();
   animais = []; pessoas = []; particulas = [];
   painelAtual = 'loja'; abaLoja = 'limpeza'; fecharMina(); fecharPesca();
-  Object.assign(tutorial, { arrastou: false, vistoObjetivo: false, minaAberta: false, pescaAberta: false });
+  Object.assign(tutorial, { arrastou: false, vistoObjetivo: false, minaAberta: false, vistoMina: false, pescaAberta: false });
   camera.zoom = 2; centrarCamera(400, 250, false); $('btnVerTudo').textContent = '🔍 Ver fazenda inteira';
   calcularFluxos(); redesenharCaches(); abrirPainel('loja'); atualizarTudo(true); salvar();
   abrirNomeFazenda(true);
@@ -5454,6 +5558,7 @@ function quadro(t) {
     atualizarTutorial();
     if (mina.aberta) atualizarTopoMina();
     if (pesca.aberta) atualizarTopoPesca();
+    posicionarFaixa();
   }
   if (acumLento > 1) {
     acumLento = 0;
