@@ -248,6 +248,11 @@
   .grupo-loja.frio { background: #e4f4ff; border-color: #6a9aca; }
   .aviso-frio { color: #2a5a8a; font-weight: bold; }
   .item .espera { font-size: 12px; font-weight: bold; color: #8a5a10; }
+  .qtd-loja { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; font-size: 13px; font-weight: bold; }
+  .qtd-loja .aba { flex: 0 1 64px; }
+  .item.piscando { animation: piscaCard .6s ease-in-out 4; }
+  @keyframes piscaCard { 50% { box-shadow: 0 0 0 4px #ffd84a; } }
+  .ir-abrigo { margin-top: 4px; }
   .prod {
     display: grid; grid-template-columns: 30px 1fr auto; gap: 2px 8px; align-items: center;
     background: #fffdf5; border: 2px solid #d8c8a8; border-radius: 9px; padding: 5px 8px;
@@ -570,13 +575,14 @@ const PRODUTOS = {
 };
 const ARTESANAIS = ['farinha', 'mel', 'queijo', 'tecido', 'geleia'];
 
-// Minérios: valem alguns segundos da produção da fazenda (nunca menos que o mínimo)
+// Minérios: valem uma fração de segundo da produção da fazenda (nunca menos que o mínimo).
+// Equilíbrio: minerando sem parar (~50 minérios/min) rende menos do que a própria produção
 const MINERIOS = {
-  cobre:    { nome: 'Cobre', ico: '🟠', cor: '#d9824a', minimo: 30, seg: 4 },
-  ferro:    { nome: 'Ferro', ico: '⚫', cor: '#8c8f99', minimo: 80, seg: 8 },
-  prata:    { nome: 'Prata', ico: '⚪', cor: '#dfe6ee', minimo: 300, seg: 20 },
-  ouro:     { nome: 'Ouro', ico: '🟡', cor: '#f5c542', minimo: 1000, seg: 45 },
-  diamante: { nome: 'Diamante', ico: '💎', cor: '#7fe3f5', minimo: 5000, seg: 150 },
+  cobre:    { nome: 'Cobre', ico: '🟠', cor: '#d9824a', minimo: 30, seg: 0.25 },
+  ferro:    { nome: 'Ferro', ico: '⚫', cor: '#8c8f99', minimo: 80, seg: 0.4 },
+  prata:    { nome: 'Prata', ico: '⚪', cor: '#dfe6ee', minimo: 300, seg: 0.6 },
+  ouro:     { nome: 'Ouro', ico: '🟡', cor: '#f5c542', minimo: 1000, seg: 0.8 },
+  diamante: { nome: 'Diamante', ico: '💎', cor: '#7fe3f5', minimo: 5000, seg: 1.4 },
 };
 function minerioDoAndar(andar) {
   if (andar <= 2) return { cobre: 1 };
@@ -598,10 +604,10 @@ const LOCAIS_PESCA = {
   caverna: { nome: 'Lago subterrâneo', ico: '🕯️', dica: `Fica no andar ${ANDAR_LAGO_SUBTERRANEO} da mina.` },
 };
 const RARIDADES = {
-  comum:    { nome: 'Comum', cor: '#8a9aa8', seg: 12, minimo: 20 },
-  incomum:  { nome: 'Incomum', cor: '#5cae3e', seg: 30, minimo: 60 },
-  raro:     { nome: 'Raro', cor: '#4a7fc1', seg: 90, minimo: 200 },
-  lendario: { nome: 'Lendário', cor: '#e9a23b', seg: 600, minimo: 3000 },
+  comum:    { nome: 'Comum', cor: '#8a9aa8', seg: 3, minimo: 20 },
+  incomum:  { nome: 'Incomum', cor: '#5cae3e', seg: 8, minimo: 50 },
+  raro:     { nome: 'Raro', cor: '#4a7fc1', seg: 20, minimo: 150 },
+  lendario: { nome: 'Lendário', cor: '#e9a23b', seg: 150, minimo: 2000 },
 };
 // cor: corpo · cor2: costas · fin: nadadeiras · tam: tamanho do desenho
 const PEIXES = [
@@ -615,13 +621,13 @@ const PEIXES = [
   { id: 'tilapia', local: 'lago', nome: 'Tilápia', raridade: 'comum', dif: 1, cor: '#b8c0b0', cor2: '#6a7a68', fin: '#8a9a80', tam: 8, listras: true },
   { id: 'carpa', local: 'lago', nome: 'Carpa', raridade: 'comum', dif: 1, cor: '#c8a060', cor2: '#8a6a30', fin: '#a08040', tam: 10 },
   { id: 'pacu', local: 'lago', nome: 'Pacu', raridade: 'incomum', dif: 2, cor: '#b0b8c0', cor2: '#606a78', fin: '#e07040', tam: 10, redondo: true },
-  { id: 'tucunare', local: 'lago', nome: 'Tucunaré', raridade: 'incomum', dif: 3, estacoes: [1], cor: '#d8c040', cor2: '#5a7a30', fin: '#e05030', tam: 11, listras: true },
+  { id: 'tucunare', local: 'lago', nome: 'Tucunaré', raridade: 'incomum', dif: 2, estacoes: [1], cor: '#d8c040', cor2: '#5a7a30', fin: '#e05030', tam: 11, listras: true },
   { id: 'pintado', local: 'lago', nome: 'Pintado', raridade: 'raro', dif: 3, horario: 'noite', cor: '#c8c8b8', cor2: '#7a7a6a', fin: '#8a8a7a', tam: 13, pintas: true, bigode: true },
   { id: 'koi', local: 'lago', nome: 'Carpa-Koi', raridade: 'raro', dif: 3, estacoes: [0], cor: '#ffffff', cor2: '#f06030', fin: '#ffffff', tam: 11, pintas: true },
   { id: 'pirarucu', local: 'lago', nome: 'Pirarucu Gigante', raridade: 'lendario', dif: 5, cor: '#7a8a5a', cor2: '#3a4a2a', fin: '#c83020', tam: 16, escamas: true },
-  { id: 'peixeCaverna', local: 'caverna', nome: 'Peixe-caverna', raridade: 'comum', dif: 2, cor: '#e8dce8', cor2: '#b0a0b8', fin: '#d0c0d8', tam: 7, cego: true },
-  { id: 'enguia', local: 'caverna', nome: 'Enguia-cega', raridade: 'incomum', dif: 3, cor: '#7a6a8a', cor2: '#4a3a5a', fin: '#9a8aaa', tam: 14, enguia: true, cego: true },
-  { id: 'lanterna', local: 'caverna', nome: 'Peixe-lanterna', raridade: 'raro', dif: 4, cor: '#3a4a6a', cor2: '#1a2a4a', fin: '#5a7aaa', tam: 10, luz: true },
+  { id: 'peixeCaverna', local: 'caverna', nome: 'Peixe-caverna', raridade: 'comum', dif: 1, cor: '#e8dce8', cor2: '#b0a0b8', fin: '#d0c0d8', tam: 7, cego: true },
+  { id: 'enguia', local: 'caverna', nome: 'Enguia-cega', raridade: 'incomum', dif: 2, cor: '#7a6a8a', cor2: '#4a3a5a', fin: '#9a8aaa', tam: 14, enguia: true, cego: true },
+  { id: 'lanterna', local: 'caverna', nome: 'Peixe-lanterna', raridade: 'raro', dif: 3, cor: '#3a4a6a', cor2: '#1a2a4a', fin: '#5a7aaa', tam: 10, luz: true },
   { id: 'peixeCristal', local: 'caverna', nome: 'Peixe-Cristal', raridade: 'lendario', dif: 5, cor: '#bff4ff', cor2: '#6ad0e8', fin: '#e8fcff', tam: 14, cristal: true },
 ];
 const PEIXE = Object.fromEntries(PEIXES.map(p => [p.id, p]));
@@ -667,8 +673,8 @@ const ABRIGOS = {
 };
 for (const e in ABRIGOS) LINHA_BASE[ABRIGOS[e].linha] = { nome: 'Sem ' + ABRIGOS[e].nome, cap: 0 };
 const abrigo = (id, nome, ico, especie, tier, custo, nivel, cap, extra) => Object.assign({
-  id, cat: 'animais', especie, abrigo: true, nome, ico, custo, nivel, linha: ABRIGOS[especie].linha, tier, cap,
-  desc: `Abriga até ${cap} ${ABRIGOS[especie].plural} no inverno.`,
+  id, cat: 'construcoes', grupo: 'abrigos', especie, abrigo: true, nome, ico, custo, nivel, linha: ABRIGOS[especie].linha, tier, cap,
+  desc: `Casa para até ${cap} ${ABRIGOS[especie].plural}.`,
 }, extra || {});
 
 // ---------------------------------------------------------------------
@@ -742,7 +748,7 @@ const ITENS = [
   abrigo('chiqueiroGrande', 'Chiqueiro grande', '🏚️', 'porco', 2, 3000000, 7, 40),
   abrigo('chiqueiroModelo', 'Chiqueiro modelo', '🏚️', 'porco', 3, 50000000, 9, 160),
   { id: 'porco', cat: 'animais', especie: 'porco', area: 'bosque', nome: 'Porco', ico: '🐷', custo: 50000, nivel: 5, req: [['chiqueiro', 1]], renda: 1000, produz: 'trufas', som: 'porco', desc: 'Fuça o bosque e acha trufas.' },
-  abrigo('capril', 'Capril', '🏡', 'cabra', 1, 120000, 5, 10, { req: [['mata', 1]] }),
+  abrigo('capril', 'Capril', '🏡', 'cabra', 1, 120000, 5, 10, { req: [['troncos', 1]] }),
   abrigo('caprilGrande', 'Capril grande', '🏡', 'cabra', 2, 4000000, 7, 40),
   abrigo('caprilModelo', 'Capril modelo', '🏡', 'cabra', 3, 60000000, 9, 160),
   { id: 'cabra', cat: 'animais', especie: 'cabra', area: 'bosque', nome: 'Cabra', ico: '🐐', custo: 80000, nivel: 5, req: [['capril', 1]], renda: 1500, produz: 'leite', som: 'cabra', desc: 'Leite de cabra para a queijaria.' },
@@ -757,10 +763,10 @@ const ITENS = [
   abrigo('cocheira', 'Cocheira', '🐴', 'cavalo', 1, 2000000, 7, 4, { req: [['cercaAlta', 1]] }),
   abrigo('cocheiraGrande', 'Cocheira grande', '🐴', 'cavalo', 2, 30000000, 9, 15),
   { id: 'cavalo', cat: 'animais', especie: 'cavalo', area: 'colina', nome: 'Cavalo', ico: '🐴', custo: 1500000, nivel: 7, req: [['cocheira', 1]], renda: 22000, som: 'cavalo', desc: 'Passeios a cavalo para os visitantes (rende moedas direto).' },
-  { id: 'abelhas', cat: 'animais', especie: 'abelhas', area: 'bosque', nome: 'Colmeia de abelhas', ico: '🐝', custo: 60000, nivel: 5, req: [['troncos', 1]], renda: 1100, produz: 'mel', som: 'abelha', desc: 'Cada colmeia é a casa das abelhas: elas produzem mel até no inverno.' },
-  { id: 'casinhaCachorro', cat: 'animais', especie: 'pets', area: 'sede', nome: 'Casinha do cachorro', ico: '🏠', custo: 500000, nivel: 8, abrigo: true, desc: 'Uma casinha de madeira ao lado da casa.', msg: 'A casinha do cachorro ficou pronta!' },
+  { id: 'abelhas', cat: 'animais', especie: 'abelhas', area: 'bosque', nome: 'Colmeia de abelhas', ico: '🐝', custo: 60000, nivel: 5, req: [['apiario', 1]], renda: 1100, produz: 'mel', som: 'abelha', desc: 'As colmeias ficam no apiário e produzem mel até no inverno.' },
+  { id: 'casinhaCachorro', cat: 'construcoes', grupo: 'abrigos', especie: 'pets', area: 'sede', nome: 'Casinha do cachorro', ico: '🏠', custo: 500000, nivel: 8, abrigo: true, desc: 'Uma casinha de madeira ao lado da casa.', msg: 'A casinha do cachorro ficou pronta!' },
   { id: 'cachorro', cat: 'animais', especie: 'pets', area: 'sede', nome: 'Cachorro', ico: '🐕', custo: 2000000, nivel: 8, req: [['casinhaCachorro', 1]], unico: true, pet: true, som: 'cachorro', desc: 'Só para carinho! Clique nele quando passar.', msg: 'Au, au! Um cachorrinho chegou!' },
-  { id: 'gato', cat: 'animais', especie: 'pets', area: 'sede', nome: 'Gato', ico: '🐈', custo: 2000000, nivel: 8, unico: true, pet: true, som: 'gato', desc: 'Só para carinho! Ele mora na casa do fazendeiro.', msg: 'Miau! Um gatinho chegou!' },
+  { id: 'gato', cat: 'animais', especie: 'pets', area: 'sede', nome: 'Gato', ico: '🐈', custo: 2000000, nivel: 8, req: [['casa', 1]], unico: true, pet: true, som: 'gato', desc: 'Só para carinho! Ele mora na casa do fazendeiro.', msg: 'Miau! Um gatinho chegou!' },
 
   // ===== Construções =====
   { id: 'celeiro', cat: 'construcoes', area: 'sede', nome: 'Reformar o celeiro', ico: '🏠', custo: 25000, nivel: 4, linha: 'celeiro', tier: 1, bonus: 0.15, desc: 'Guarda ração e feno: animais +15%.', msg: 'O celeiro foi reformado!' },
@@ -768,8 +774,8 @@ const ITENS = [
   { id: 'celeiroDeluxe', cat: 'construcoes', area: 'sede', nome: 'Celeiro deluxe', ico: '🏠', custo: 20000000, nivel: 9, linha: 'celeiro', tier: 3, bonus: 0.5, desc: 'Animais +50%.' },
   { id: 'moinhoGrande', cat: 'construcoes', area: 'campo', nome: 'Moinho grande', ico: '🌬️', custo: 500000, nivel: 6, linha: 'moinho', tier: 2, desc: 'Transforma 75% do trigo em farinha.' },
   { id: 'moinhoPedra', cat: 'construcoes', area: 'campo', nome: 'Moinho de pedra', ico: '🌬️', custo: 8000000, nivel: 8, linha: 'moinho', tier: 3, desc: 'Transforma todo o trigo em farinha.' },
-  { id: 'apiario', cat: 'construcoes', area: 'bosque', nome: 'Apiário', ico: '🍯', custo: 100000, nivel: 5, req: [['abelhas', 1]], linha: 'apiario', tier: 1, desc: 'Transforma metade das flores de girassol em mel.', msg: 'Apiário construído! Bzzz!' },
-  { id: 'apiarioReal', cat: 'construcoes', area: 'bosque', nome: 'Apiário real', ico: '🍯', custo: 6000000, nivel: 8, linha: 'apiario', tier: 2, desc: 'Transforma todas as flores em mel.' },
+  { id: 'apiario', cat: 'construcoes', grupo: 'abrigos', especie: 'abelhas', area: 'bosque', nome: 'Apiário', ico: '🍯', custo: 100000, nivel: 5, req: [['troncos', 1]], linha: 'apiario', tier: 1, cap: 20, desc: 'Casa para até 20 colmeias de abelhas. Também transforma metade das flores de girassol em mel.', msg: 'Apiário construído! Bzzz!' },
+  { id: 'apiarioReal', cat: 'construcoes', grupo: 'abrigos', especie: 'abelhas', area: 'bosque', nome: 'Apiário real', ico: '🍯', custo: 6000000, nivel: 8, linha: 'apiario', tier: 2, cap: 80, desc: 'Casa para até 80 colmeias e transforma todas as flores em mel.' },
   { id: 'queijaria', cat: 'construcoes', area: 'colina', nome: 'Queijaria', ico: '🧀', custo: 400000, nivel: 6, req: [['cercaAlta', 1]], linha: 'queijaria', tier: 1, desc: 'Transforma metade do leite em queijo.', msg: 'A queijaria está funcionando!' },
   { id: 'queijariaGrande', cat: 'construcoes', area: 'colina', nome: 'Queijaria grande', ico: '🧀', custo: 25000000, nivel: 9, linha: 'queijaria', tier: 2, desc: 'Transforma todo o leite em queijo.' },
   { id: 'tear', cat: 'construcoes', area: 'sede', nome: 'Tear manual', ico: '🧵', custo: 1500000, nivel: 7, req: [['ovelha', 1]], linha: 'tear', tier: 1, desc: 'Transforma metade da lã em tecido.', msg: 'O tear começou a tecer!' },
@@ -814,6 +820,17 @@ const ITENS = [
   { id: 'balanco', cat: 'decoracao', area: 'pomar', nome: 'Balanço na árvore', ico: '🌳', custo: 60000, nivel: 5, desc: 'Um balanço no carvalho grande do pomar.' },
   { id: 'fonte', cat: 'decoracao', area: 'sede', nome: 'Fonte de pedra', ico: '⛲', custo: 300000, nivel: 6, desc: 'Uma fonte com água corrente no meio da sede.' },
 ];
+// O lugar de cada item precisa estar limpo: as limpezas do chão da área viram pré-requisito
+const LIMPO_AREA = { sede: ['mato', 'pedras', 'lixo'], pomar: ['galhos', 'tocos'], lago: ['lago'], campo: ['entulho'], bosque: ['mata', 'troncos'], colina: ['trilha'] };
+const LIMPO_ITEM = { cenoura: ['mato', 'pedras'], couve: ['mato', 'pedras'], repolho: ['mato', 'pedras'], lampioes: ['mato', 'pedras', 'lixo', 'entulho'], cercaBonita: ['mato', 'pedras', 'lixo'], caminhoPedra: ['mato', 'pedras', 'lixo'] };
+for (const it of ITENS) {
+  if (it.cat === 'limpeza' || it.cat === 'ferramentas') continue; // as ferramentas ficam penduradas no galpão
+  if (!it.area && it.especie) it.area = (ITENS.find(x => x.id === it.especie) || {}).area; // abrigo fica na área do seu animal
+  const l = LIMPO_ITEM[it.id] || LIMPO_AREA[it.area] || [];
+  it.req = it.req || [];
+  for (const id of l) if (!it.req.some(r => r[0] === id)) it.req.push([id, 1]);
+  it.limpo = l;
+}
 const ITEM = Object.fromEntries(ITENS.map(i => [i.id, i]));
 for (const it of ITENS) {
   if (!it.unico && it.renda && !it.pet) {
@@ -910,7 +927,7 @@ const HABILIDADES = [
   { id: 'p1', nome: 'Ração boa', ico: '🌾', desc: 'Animais produzem +15%.' },
   { id: 'p2', nome: 'Animais felizes', ico: '💕', desc: 'Com um pet na fazenda, os animais produzem +20%.' },
   { id: 'p3', nome: 'Raças premium', ico: '🏅', desc: 'Leite e lã +25%.' },
-  { id: 'p4', nome: 'Abrigo aquecido', ico: '🔥', desc: 'Animais abrigados produzem +30% no inverno.' },
+  { id: 'p4', nome: 'Abrigo aquecido', ico: '🔥', desc: 'No inverno, os animais nos abrigos produzem +30%.' },
   { id: 'p5', nome: 'Criador mestre', ico: '🤠', desc: 'Animais produzem ×1,5.' },
   { id: 'r1', nome: 'Moagem fina', ico: '🌬️', desc: 'O moinho rende +25% de farinha.' },
   { id: 'r2', nome: 'Receita da vovó', ico: '👵', desc: 'Queijo e geleia valem +25%.' },
@@ -987,7 +1004,7 @@ cq('animais', 'animais25', 'bronze', 'Bicharada', '🐾', 'Tenha 25 animais.', (
 cq('animais', 'animais80', 'prata', 'Fazenda cheia de vida', '🐮', 'Tenha 80 animais.', () => [totalAnimais(), 80]);
 cq('animais', 'animais200', 'ouro', 'Criador de respeito', '🤠', 'Tenha 200 animais. Dá 1 ponto de habilidade!', () => [totalAnimais(), 200], { ponto: true });
 cq('animais', 'arca', 'ouro', 'Arca de Noé', '🚢', 'Tenha pelo menos um de cada animal de criação.', () => [PRODUTORES.filter(i => i.cat === 'animais' && tem(i.id)).length, PRODUTORES.filter(i => i.cat === 'animais').length]);
-cq('animais', 'abrigados', 'prata', 'Ninguém no frio', '🏠', 'Passe um inverno com todos os animais abrigados.', () => [estado.contadores.invernoAbrigado || 0, 1]);
+cq('animais', 'abrigados', 'prata', 'Abrigos de luxo', '🏠', 'Tenha 3 abrigos de animais na melhor versão.', () => [Object.values(ABRIGOS).filter(a => tierLinha(a.linha) === LINHAS[a.linha].length - 1).length, 3]);
 cq('animais', 'pets', 'bronze', 'Melhores amigos', '🐕', 'Tenha o cachorro e o gato.', () => [feito('cachorro') + feito('gato'), 2]);
 
 cq('artesanais', 'farinha50', 'bronze', 'Saco cheio', '🍞', 'Produza 50 sacos de farinha.', () => [produzido('farinha'), 50]);
@@ -1145,7 +1162,16 @@ function ferramentasNoTier(t) {
   return LINHAS_FERRAMENTA.filter(l => tierLinha(l) - (l === 'vara' ? 1 : 0) >= t).length;
 }
 const capEstufa = () => dadoLinha('estufa').cap || 0;
-const capAbrigo = esp => ABRIGOS[esp] ? (dadoLinha(ABRIGOS[esp].linha).cap || 0) : Infinity;
+// Cada espécie só pode ter os animais que cabem no seu abrigo (as abelhas, no apiário)
+const LINHA_ABRIGO = esp => ABRIGOS[esp] ? ABRIGOS[esp].linha : esp === 'abelhas' ? 'apiario' : null;
+const capAbrigo = esp => LINHA_ABRIGO(esp) ? (dadoLinha(LINHA_ABRIGO(esp)).cap || 0) : Infinity;
+// O item que abriga uma espécie (para o botão "Ir para o abrigo")
+function itemAbrigo(esp) {
+  if (esp === 'cachorro') return ITEM.casinhaCachorro;
+  if (esp === 'gato') return ITEM.casa;
+  const l = LINHA_ABRIGO(esp);
+  return l ? (LINHAS[l][tierLinha(l) + 1] || LINHAS[l][tierLinha(l)]) : null;
+}
 function vagasEquipe() {
   let v = 0;
   for (const n in VAGAS_NIVEL) if (estado.nivel >= Number(n)) v = Math.max(v, VAGAS_NIVEL[n]);
@@ -1184,16 +1210,8 @@ function fatorEstacao(item, est) {
   if (est === 3) return Math.min(0.7, 0.25 + 0.15 * contarFuncao('jardineiro') * multEquipe());
   return fav;
 }
-// Produção dos animais de uma espécie no inverno: quem não cabe no abrigo produz metade
-function fatorAbrigo(esp, est) {
-  if (est !== 3 || !ABRIGOS[esp]) return 1;
-  const n = qtd(esp);
-  if (!n) return 1;
-  const dentro = Math.min(n, capAbrigo(esp));
-  return (dentro * (hab('p4') ? 1.3 : 1) + (n - dentro) * 0.5) / n;
-}
-const animaisAbrigados = esp => [Math.min(qtd(esp), capAbrigo(esp)), qtd(esp)];
-const especiesSemAbrigo = () => Object.keys(ABRIGOS).filter(e => qtd(e) > capAbrigo(e));
+// No inverno todos os animais ficam nos abrigos (sempre cabem: o abrigo é o limite)
+const fatorAbrigo = (esp, est) => est === 3 && ABRIGOS[esp] && hab('p4') ? 1.3 : 1;
 function multPlantas() {
   return (1 + dadoLinha('regador').bonus) * (hab('a1') ? 1.15 : 1) * (hab('a2') ? 1.1 : 1) * (hab('a5') ? 1.5 : 1)
     * (1 + bonusFuncao('colheita'));
@@ -1358,14 +1376,9 @@ function tick(dt) {
   concluirObras();
   const estDepois = estacao();
   if (estDepois !== estAntes) {
-    if (estAntes === 3) {
-      estado.contadores.invernos++;
-      if (estado.invernoTodosAbrigados && totalAnimais() > 0) estado.contadores.invernoAbrigado = 1;
-    }
-    if (estDepois === 3) estado.invernoTodosAbrigados = true;
+    if (estAntes === 3) estado.contadores.invernos++;
     emitir('estacao', estDepois);
   }
-  if (estDepois === 3 && especiesSemAbrigo().length) estado.invernoTodosAbrigados = false;
   calcularFluxos();
   for (const p in fluxo.prod) {
     const u = fluxo.prod[p] * dt;
@@ -1441,9 +1454,10 @@ function custoLote(item, n) {
 function temMinerios(item) {
   return !item.minerios || Object.entries(item.minerios).every(([m, n]) => (estado.minerios[m] || 0) >= n);
 }
-// A estufa tem um limite para CADA tipo de planta; as plantações de fora não têm limite
+// A estufa tem um limite para CADA tipo de planta; cada animal, o do seu abrigo; as plantações de fora não têm limite
 function limiteCapacidade(item) {
   if (item.planta === 'estufa') return Math.max(0, capEstufa() - qtd(item.id));
+  if (item.cat === 'animais' && item.repetivel) return Math.max(0, capAbrigo(item.id) - qtd(item.id));
   return Infinity;
 }
 function maxAcessivel(item) {
@@ -2169,7 +2183,7 @@ const CAMINHOS = [
 ];
 // Construções, cercados e canteiros (não recebem sujeira por cima)
 const OCUPADO = [
-  [276, 154, 310, 198], [366, 144, 456, 200], [462, 148, 540, 256], [270, 210, 384, 276], [272, 292, 386, 350],
+  [276, 154, 310, 198], [366, 144, 456, 200], [462, 148, 540, 256], [264, 204, 390, 282], [272, 292, 386, 350],
   [450, 284, 536, 356], [402, 202, 452, 266], [312, 112, 358, 152], [340, 176, 368, 200], [408, 312, 450, 350],
   [12, 288, 144, 382], [10, 392, 236, 502], [168, 88, 220, 104], [18, 160, 68, 202], [180, 330, 232, 376],
   [552, 156, 634, 212], [636, 162, 720, 234], [724, 154, 794, 218], [552, 282, 654, 356], [660, 282, 796, 356],
@@ -2287,7 +2301,7 @@ const LOCAL = {
   estabulo: [566, 34], estabuloGrande: [566, 34], estabuloModelo: [566, 34],
   cocheira: [718, 40], cocheiraGrande: [718, 40], casinhaCachorro: [354, 190],
   celeiro: [492, 320], celeiroGrande: [492, 320], celeiroDeluxe: [492, 320],
-  estufaGrande: [78, 330], estufaCristal: [78, 330],
+  estufaGrande: [78, 330], estufaCristal: [78, 306],
   moinhoGrande: [720, 460], moinhoPedra: [720, 460], apiario: [580, 182], apiarioReal: [580, 182],
   queijaria: [720, 100], queijariaGrande: [720, 100], tear: [297, 320], tearMecanico: [297, 320],
   cozinha: [440, 186], cozinhaVovo: [440, 186], casa: [400, 172], casarao: [400, 172],
@@ -3435,13 +3449,9 @@ const AREA_ANIMAL = {
   ovelha: [430, 60, 540, 114], vaca: [540, 58, 676, 114], cavalo: [440, 62, 676, 114],
   cachorro: [300, 202, 390, 280], gato: [360, 200, 460, 270],
 };
-// No inverno, quem não cabe no abrigo fica do lado de fora, encolhido perto da porta
-const CANTO_FRIO = { galinha: [486, 232], pato: [70, 150], coelho: [700, 200], porco: [624, 318], cabra: [770, 322], ovelha: [450, 66], vaca: [566, 62], cavalo: [664, 72] };
 const VEL_ANIMAL = { galinha: 11, pato: 5, coelho: 14, porco: 5, cabra: 7, ovelha: 5, vaca: 4, cavalo: 9, cachorro: 16, gato: 9 };
 let animais = [];
-const noFrio = tipo => inverno() && !!CANTO_FRIO[tipo];
 function posAnimal(tipo) {
-  if (noFrio(tipo)) { const [x, y] = CANTO_FRIO[tipo]; return [x + sorteia(-9, 9), y + sorteia(-4, 4)]; }
   if (tipo === 'pato') {
     for (;;) {
       const x = sorteia(LAGO.cx - LAGO.rx, LAGO.cx + LAGO.rx), y = sorteia(LAGO.cy - LAGO.ry, LAGO.cy + LAGO.ry);
@@ -3451,13 +3461,12 @@ function posAnimal(tipo) {
   const a = AREA_ANIMAL[tipo];
   return [sorteia(a[0], a[2]), sorteia(a[1], a[3])];
 }
-// Quantos de cada espécie aparecem do lado de fora (no inverno, os abrigados ficam dentro)
+// Quantos de cada espécie aparecem do lado de fora (no inverno, todos ficam dentro dos abrigos)
 function visiveisAnimal(tipo) {
   const it = ITEM[tipo];
   if (it.pet) return tem(tipo) ? 1 : 0;
-  if (!inverno() || !ABRIGOS[tipo]) return Math.min(LIMITES[tipo], qtd(tipo));
-  const [dentro, total] = animaisAbrigados(tipo);
-  return Math.min(LIMITES[tipo], total - dentro);
+  if (inverno() && ABRIGOS[tipo]) return 0;
+  return Math.min(LIMITES[tipo], qtd(tipo));
 }
 let invernoDosAnimais = null;
 function sincronizarAnimais() {
@@ -3475,28 +3484,25 @@ function sincronizarAnimais() {
 function atualizarAnimais(dt) {
   for (const a of animais) {
     if (a.pulo > 0) a.pulo = Math.max(0, a.pulo - dt * 4);
-    const frio = noFrio(a.tipo);
     if (a.espera > 0) {
       a.espera -= dt;
-      if (!frio && (a.tipo === 'galinha' || a.tipo === 'coelho') && Math.random() < dt * 0.3) a.pulo = 1;
+      if ((a.tipo === 'galinha' || a.tipo === 'coelho') && Math.random() < dt * 0.3) a.pulo = 1;
       continue;
     }
-    const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy), v = VEL_ANIMAL[a.tipo] * dt * (frio ? 0.4 : 1);
-    if (d <= v || d < 0.01) { a.x = a.tx; a.y = a.ty; a.espera = (frio ? 4 : 1) + Math.random() * (a.tipo === 'galinha' ? 2.5 : 5); [a.tx, a.ty] = posAnimal(a.tipo); }
+    const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy), v = VEL_ANIMAL[a.tipo] * dt;
+    if (d <= v || d < 0.01) { a.x = a.tx; a.y = a.ty; a.espera = 1 + Math.random() * (a.tipo === 'galinha' ? 2.5 : 5); [a.tx, a.ty] = posAnimal(a.tipo); }
     else { a.x += dx / d * v; a.y += dy / d * v; if (Math.abs(dx) > 0.5) a.dir = dx > 0 ? 1 : -1; if (a.tipo === 'coelho') a.pulo = Math.max(a.pulo, 0.5); }
   }
 }
-function floquinho(x, y, cor = '#ffffff') { R(x, y - 2, 1, 5, cor); R(x - 2, y, 5, 1, cor); R(x - 1, y - 1, 1, 1, cor); R(x + 1, y + 1, 1, 1, cor); R(x + 1, y - 1, 1, 1, cor); R(x - 1, y + 1, 1, 1, cor); }
 function desenharAnimal(a, t) {
   const spr = SPR[a.tipo][a.v];
-  const andando = a.espera <= 0, frio = noFrio(a.tipo);
+  const andando = a.espera <= 0;
   let q = 'A';
   if (andando) q = (Math.floor(t / 160 + a.fase) % 2) ? 'B' : 'A';
-  else if (!frio && spr.C && Math.sin(t / (a.tipo === 'galinha' ? 140 : 900) + a.fase) > 0.2) q = 'C';
+  else if (spr.C && Math.sin(t / (a.tipo === 'galinha' ? 140 : 900) + a.fase) > 0.2) q = 'C';
   const quadro = (spr[q] || spr.A)[a.dir > 0 ? 'd' : 'e'];
   const w = quadro.width, h = quadro.height;
-  const tremendo = frio && Math.floor(t / 90 + a.fase) % 6 === 0 ? 1 : 0;
-  const x = Math.round(a.x - w / 2) + tremendo;
+  const x = Math.round(a.x - w / 2);
   let y = Math.round(a.y - h);
   if (a.tipo === 'pato') {
     y += Math.round(Math.sin(t / 400 + a.fase));
@@ -3509,7 +3515,6 @@ function desenharAnimal(a, t) {
     elipse(Math.round(a.x), Math.round(a.y), Math.round(w / 2) - 1, 1, 'rgba(30,40,10,.25)');
     c.drawImage(quadro, x, y);
   }
-  if (frio && Math.floor(t / 700 + a.fase) % 3 === 0) floquinho(Math.round(a.x), y - 4, '#bfe6ff');
 }
 // Luz quentinha saindo dos abrigos que têm animais dentro no inverno
 const JANELA_ABRIGO = { galinha: [466, 167, 8, 6], pato: [26, 178, 6, 5], coelho: [690, 176, 6, 4], porco: [632, 296, 8, 6], cabra: [759, 297, 6, 6], ovelha: [430, 27, 6, 6], vaca: [543, 29, 6, 6], cavalo: [698, 38, 12, 6] };
@@ -3610,18 +3615,35 @@ function desenharObras(t) {
 
 // ---------- Destaque de uma compra (a câmera vai até lá e um anel pisca) ----------
 let destaque = null;
+// Onde o item comprado está desenhado (animais: o bichinho novo, que anda; no inverno, o abrigo dele)
+const FERRAMENTA_NO_GALPAO = { enxada: [333, 310], regador: [344, 326], balde: [353, 326], picareta: [363, 311], vara: [374, 318] };
+function posDestaque(id) {
+  const it = ITEM[id];
+  if (it.cat === 'ferramentas') { const p = FERRAMENTA_NO_GALPAO[it.linha]; return () => p; }
+  if (it.cat === 'animais' && id !== 'abelhas') {
+    if (inverno() && ABRIGOS[id]) { const p = LOCAL[LINHAS[ABRIGOS[id].linha][1].id]; return () => p; }
+    const a = animais.filter(x => x.tipo === id).pop();
+    if (a) return () => [a.x, a.y - 6];
+  }
+  if (SLOTS[id]) {
+    const n = id === 'milho' ? qtd(id) * 2 : qtd(id), s = SLOTS[id][Math.max(0, Math.min(n, SLOTS[id].length) - 1)];
+    return () => [s.x + (id === 'milho' ? 1 : 8), s.y + (id === 'milho' ? -10 : 6)];
+  }
+  const p = LOCAL[id];
+  return p ? () => p : null;
+}
+// Chamado só depois que o desenho já está no mapa (caches redesenhados / animal criado)
 function destacar(id, mover = true) {
-  const p = LOCAL[id] || (SLOTS[id] && SLOTS[id][Math.max(0, Math.min(qtd(id), SLOTS[id].length) - 1)]) || null;
-  if (!p) return;
-  const [x, y] = Array.isArray(p) ? p : [p.x + 8, p.y + 6];
-  destaque = { x, y, ate: performance.now() + 2600 };
-  if (mover) centrarCamera(x, y);
+  const pos = posDestaque(id);
+  if (!pos) return;
+  destaque = { pos, ate: performance.now() + 2600 };
+  if (mover) centrarCamera(...pos());
 }
 function desenharDestaque(t) {
   if (!destaque) return;
   const resta = destaque.ate - t;
   if (resta <= 0) { destaque = null; return; }
-  const { x, y } = destaque, r = 14 + Math.sin(t / 120) * 2;
+  const [x, y] = destaque.pos(), r = 14 + Math.sin(t / 120) * 2;
   c.globalAlpha = Math.min(1, resta / 500);
   for (let a = 0; a < Math.PI * 2; a += 0.08) R(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.55, 2, 1, Math.floor(a * 3 + t / 100) % 2 ? '#ffd84a' : '#ffffff');
   const by = y - 30 + Math.round(Math.sin(t / 150) * 3);
@@ -4013,6 +4035,9 @@ function atualizarPontinhos() {
 const CATS_LOJA = [['limpeza', '🧹 Limpeza'], ['plantacoes', '🌱 Plantações'], ['animais', '🐾 Animais'], ['construcoes', '🏠 Construções'], ['ferramentas', '🧰 Ferramentas'], ['decoracao', '🌷 Decoração']];
 const GRUPOS_PLANTA = [['horta', '🥕 Horta e campo'], ['pomar', '🍎 Pomar'], ['estufa', '🪟 Estufa']];
 const ESPECIES = ['galinha', 'pato', 'coelho', 'porco', 'cabra', 'ovelha', 'vaca', 'cavalo', 'abelhas', 'pets'];
+const QTDS_LOJA = [['1', '1x'], ['5', '5x'], ['10', '10x'], ['max', 'Máx']];
+let qtdLoja = '1'; // quantidade escolhida no topo da loja, vale para todos os itens
+const ordemEspecie = it => { const i = ESPECIES.indexOf(it.especie); return i < 0 ? 99 : i; };
 // 'disponivel' | 'espera' (obra na fila) | 'nivel' | 'requisito' | 'misterio' | 'obra' | 'feito' | null (não aparece)
 function visivelNaLoja(item) {
   if (item.unico && tem(item.id)) {
@@ -4031,8 +4056,21 @@ function visivelNaLoja(item) {
   if (precisaObra(item) && obraQueBloqueia(item)) return 'espera';
   return 'disponivel';
 }
+// "Limpe o mato e as pedras da sede para liberar" · "Requer: Galinheiro"
+const LIMPO_NOME = { mato: 'o mato', pedras: 'as pedras', lixo: 'o lixo', galhos: 'os galhos secos', tocos: 'os tocos', lago: 'o lago', entulho: 'o entulho', mata: 'a mata fechada', troncos: 'os troncos caídos', trilha: 'a trilha' };
+const DA_AREA = { sede: 'da sede', pomar: 'do pomar', lago: '', campo: 'do campo', bosque: 'do bosque', colina: 'da colina' };
+const listaE = l => l.length > 1 ? l.slice(0, -1).join(', ') + ' e ' + l[l.length - 1] : l[0];
 function textoReq(item) {
-  return item.req.filter(([id, n]) => qtd(id) < n).map(([id, n]) => (n > 1 ? `${n}× ${ITEM[id].nome}` : ITEM[id].nome) + (emObra(id) ? ' (em obra)' : '')).join(' + ');
+  const falta = (item.req || []).filter(([id, n]) => qtd(id) < n && !(precisaObra(item) && n === 1 && emObra(id)));
+  const limpar = falta.filter(([id]) => (item.limpo || []).includes(id)), outros = falta.filter(([id]) => !(item.limpo || []).includes(id));
+  const partes = [];
+  if (limpar.length) {
+    const porArea = {};
+    for (const [id] of limpar) (porArea[ITEM[id].area] = porArea[ITEM[id].area] || []).push(LIMPO_NOME[id]);
+    partes.push('🧹 Limpe ' + Object.entries(porArea).map(([a, l]) => `${listaE(l)}${DA_AREA[a] ? ' ' + DA_AREA[a] : ''}`).join(' e ') + ' para liberar' + (limpar.some(([id]) => emObra(id)) ? ' (a limpeza já está em obra)' : ''));
+  }
+  if (outros.length) partes.push('Requer: ' + outros.map(([id, n]) => (n > 1 ? `${n}× ` : '') + (ITEM[id].nomeCurto || ITEM[id].nome) + (emObra(id) ? ' (em obra)' : '')).join(' + '));
+  return partes.join(' · ');
 }
 function rendaUnidade(item) {
   const est = estacao();
@@ -4043,29 +4081,28 @@ function rendaUnidade(item) {
   else r *= multVendas();
   return r;
 }
-// Texto do abrigo de inverno, ex.: "Inverno: 15 de 30 galinhas cabem no galinheiro. As outras 15 produzem só metade."
-function textoAbrigo(esp) {
-  const a = ABRIGOS[esp];
-  if (!a) return '';
-  const n = qtd(esp), cap = capAbrigo(esp), onde = `${a.em} ${a.nome}`;
-  if (!tierLinha(a.linha)) return `🏠 Precisa ${a.em === 'na' ? 'da' : 'do'} ${a.nome} antes de comprar.`;
-  if (!n) return `❄️ Inverno: cabem até ${fmt(cap)} ${a.plural} ${onde}.`;
-  if (n <= cap) return `❄️ Inverno: ${a.fem ? 'todas as' : 'todos os'} ${fmt(n)} ${a.plural} cabem ${onde} (cabem até ${fmt(cap)}).`;
-  const prox = LINHAS[a.linha][tierLinha(a.linha) + 1];
-  return `<span class="aviso-frio">❄️ Inverno: ${fmt(cap)} de ${fmt(n)} ${a.plural} cabem ${onde}. ${a.fem ? 'As outras' : 'Os outros'} ${fmt(n - cap)} produzem só metade.</span> `
-    + (prox ? `Melhore ${a.art} ${a.nome} para abrigar mais.` : `${a.art === 'a' ? 'A' : 'O'} ${a.nome} já está no máximo.`);
+// Ocupação do abrigo: "Galinhas: 10 / 15"
+const pluralEspecie = esp => ABRIGOS[esp] ? ABRIGOS[esp].plural : esp === 'abelhas' ? 'colmeias' : esp;
+const Maiuscula = t => t[0].toUpperCase() + t.slice(1);
+function textoOcupacao(esp) {
+  const l = LINHA_ABRIGO(esp);
+  if (!l) return '';
+  if (!tierLinha(l)) return `🏠 Ainda não há ${l === 'apiario' ? 'apiário' : ABRIGOS[esp].nome}: construa na aba 🏠 Construções.`;
+  const n = qtd(esp), cap = capAbrigo(esp), nome = l === 'apiario' ? 'o apiário' : `${ABRIGOS[esp].art} ${ABRIGOS[esp].nome}`;
+  const prox = LINHAS[l][tierLinha(l) + 1];
+  return `🏠 ${Maiuscula(pluralEspecie(esp))}: <b>${fmt(n)} / ${fmt(cap)}</b>${n >= cap ? (prox ? ` · amplie ${nome} para ter mais` : ' · abrigo no tamanho máximo') : ''}`;
 }
 function infoExtra(item) {
   const nomesEst = l => l.map(i => ESTACOES[i].ico + ' ' + ESTACOES[i].nome).join(', ');
   if (item.planta === 'estufa') return `🪟 ${item.plural}: ${qtd(item.id)} / ${capEstufa()} na estufa · produz o ano todo${item.favor ? ' · favorita: ' + nomesEst(item.favor) : ''}`;
   if (item.planta === 'inverno') return '❄️ Planta de inverno: rende mais no frio.';
   if (item.planta) return `Favorita: ${nomesEst(item.favor || [])} · ❄️ no inverno rende ${Math.round(fatorEstacao(item, 3) * 100)}%`;
-  if (item.cat === 'animais' && ABRIGOS[item.id]) return textoAbrigo(item.id);
+  if (item.cat === 'animais' && item.repetivel) return textoOcupacao(item.id);
   return '';
 }
 function textoEfeito(item) {
   if (item.renda) return `+${fmtTaxa(rendaUnidade(item))}/s cada${item.produz ? ` · ${icone(PRODUTOS[item.produz].ico)} ${PRODUTOS[item.produz].nome}` : ' · 🪙 direto'}`;
-  if (item.abrigo && item.cap) return `🏠 Abriga ${fmt(item.cap)} ${ABRIGOS[item.especie].plural} no inverno`;
+  if (item.grupo === 'abrigos' && item.cap) return `🏠 Casa para ${fmt(item.cap)} ${pluralEspecie(item.especie)} (hoje cabem ${fmt(capAbrigo(item.especie))})`;
   if (item.linha === 'estufa') return `🪟 ${fmt(item.cap)} pés de cada planta`;
   if (item.linha === 'enxada') return `Clique: ${item.clique} + ${Math.round(item.pct * 100)}% da produção`;
   if (item.linha === 'picareta') return `Força ${item.forca} · desce até o andar ${item.fundo}`;
@@ -4076,6 +4113,27 @@ function nomeTier(item) {
   if (item.linha === 'vara') return `<span class="tier">${NOMES_TIER_VARA[item.tier]}</span>`;
   if (LINHAS_FERRAMENTA.includes(item.linha)) return `<span class="tier">${NOMES_TIER[item.tier]}</span>`;
   return '';
+}
+// Animal sem abrigo ou com o abrigo cheio: botão que leva até o abrigo certo
+function precisaIrAoAbrigo(item) {
+  if (item.cat !== 'animais') return false;
+  const ab = itemAbrigo(item.id);
+  if (!ab) return false;
+  if (!tem(ab.id) && (item.req || []).some(([r]) => r === ab.id)) return true;
+  return item.repetivel && tierLinha(LINHA_ABRIGO(item.id)) > 0 && limiteCapacidade(item) <= 0 && !!LINHAS[LINHA_ABRIGO(item.id)][tierLinha(LINHA_ABRIGO(item.id)) + 1];
+}
+function irParaAbrigo(esp) {
+  const ab = itemAbrigo(esp);
+  if (!ab) return;
+  abaLoja = ab.cat;
+  montarPainel();
+  const card = conteudo.querySelector(`.item[data-id="${ab.id}"]`);
+  if (card) { card.scrollIntoView({ block: 'center', behavior: 'smooth' }); card.classList.add('piscando'); setTimeout(() => card.classList.remove('piscando'), 2400); }
+}
+function botaoAbrigo(item) {
+  const b = el('button', 'btn mini ir-abrigo', '🏠 Ir para o abrigo');
+  b.addEventListener('click', () => irParaAbrigo(item.id));
+  return b;
 }
 function cartaoItem(item, status) {
   const d = el('div', 'item');
@@ -4089,7 +4147,8 @@ function cartaoItem(item, status) {
   if (status === 'nivel' || status === 'requisito') {
     d.classList.add('bloqueado');
     d.innerHTML = `<div class="ico">${ico}</div><div class="info"><div class="nome">${item.nome}${tierTxt}</div>
-      <div class="desc">🔒 ${status === 'nivel' ? `Libera no nível ${item.nivel}` : 'Requer: ' + textoReq(item)}</div><div class="efeito">${textoEfeito(item)}</div></div>`;
+      <div class="desc" data-falta>🔒 ${status === 'nivel' ? `Libera no nível ${item.nivel}` : textoReq(item)}</div><div class="efeito">${textoEfeito(item)}</div></div>`;
+    if (status === 'requisito' && precisaIrAoAbrigo(item)) d.querySelector('.info').appendChild(botaoAbrigo(item));
     return d;
   }
   if (status === 'feito') {
@@ -4102,42 +4161,44 @@ function cartaoItem(item, status) {
     <div class="nome">${item.nome}${q}${tierTxt}</div><div class="desc">${item.desc}</div>
     <div class="efeito" data-efeito></div><div class="custo-extra" data-extra></div><div class="compras"></div></div>`;
   const compras = d.querySelector('.compras');
-  if (status === 'obra' || status === 'fila') {
-    compras.innerHTML = '<span class="selo" data-obra></span>';
-  } else if (item.repetivel) {
-    for (const k of ['1', '5', '10', 'max']) {
-      const b = el('button', 'comprar'); b.dataset.k = k;
-      b.addEventListener('click', () => clicarComprar(item, k));
-      compras.appendChild(b);
-    }
-  } else {
-    const b = el('button', 'comprar'); b.dataset.k = '1';
-    b.addEventListener('click', () => clicarComprar(item, '1'));
+  if (status === 'obra' || status === 'fila') compras.innerHTML = '<span class="selo" data-obra></span>';
+  else {
+    const b = el('button', 'comprar'); b.dataset.comprar = '1';
+    b.addEventListener('click', () => clicarComprar(item));
     compras.appendChild(b);
+    if (item.cat === 'animais' && itemAbrigo(item.id)) { const ba = botaoAbrigo(item); ba.hidden = true; compras.appendChild(ba); }
   }
   return d;
 }
-function clicarComprar(item, k) {
+// Quantas unidades o botão "Comprar" vai levar agora (a escolha do topo, cortada pelo limite do item)
+function qtdDoBotao(item) {
+  if (!item.repetivel) return { n: 1, pode: maxAcessivel(item) >= 1 };
+  const m = maxAcessivel(item), lim = limiteCapacidade(item);
+  if (qtdLoja === 'max') return m >= 1 ? { n: m, pode: true } : { n: 1, pode: false };
+  const quer = Number(qtdLoja), n = Math.max(1, Math.min(quer, lim));
+  return { n, pode: m >= n, limite: n < quer };
+}
+function clicarComprar(item) {
   Som.iniciar();
-  const m = maxAcessivel(item);
-  const n = k === 'max' ? m : Number(k);
-  if (n < 1 || n > m) { Som.erro(); return; }
-  if (!comprar(item, n)) { Som.erro(); return; }
+  const { n, pode } = qtdDoBotao(item);
+  if (!pode || !comprar(item, n)) { Som.erro(); return; }
   aoComprar(item, n);
 }
 function aoComprar(item, n) {
-  if (precisaObra(item)) { atualizarTudo(true); return; } // aviso, som e destaque vêm do evento da obra
+  if (precisaObra(item)) { atualizarTudo(true); return; } // aviso, som e destaque vêm dos eventos da obra
   if (item.som) setTimeout(() => Som.animal(item.som), 200);
   Som.compra();
+  // primeiro o desenho entra no mapa; só depois a seta aponta para ele
+  redesenharCaches(); sincronizarAnimais(); sincronizarPessoas();
   const primeiro = !item.repetivel || qtd(item.id) === n;
   destacar(item.id, primeiro); // a câmera só viaja até lá na primeira compra
-  if (n > 1) avisar(`${icone(item.ico)} ${fmt(n)}× ${item.nome}!`, '', 1800);
+  if (item.cat === 'animais' && inverno() && ABRIGOS[item.id]) avisar(`${icone(item.ico)} ${n > 1 ? fmt(n) + ' novos' : 'O novo animal'} já ${n > 1 ? 'entraram' : 'entrou'} ${ABRIGOS[item.id].em} ${ABRIGOS[item.id].nome} para fugir do frio.`, '', 2600);
+  else if (n > 1) avisar(`${icone(item.ico)} ${fmt(n)}× ${item.nome}!`, '', 1800);
   else if (item.msg) avisar(item.msg);
   else if (item.cat === 'decoracao') avisar(`${icone(item.ico)} <b>${item.nome}</b> já está na fazenda!`, '', 2600);
-  sincronizarAnimais();
   atualizarTudo(true);
 }
-// Cabeçalho dos grupos da loja (estufa com a ocupação de cada planta, espécies com o abrigo)
+// Cabeçalho dos grupos da loja
 function cabecalhoGrupo(cat, g) {
   if (cat === 'limpeza') return `${AREAS[g].ico} <b>${AREAS[g].nome}</b>${areaLiberada(g) ? '' : ` · 🔒 nível ${AREAS[g].nivel}`}`;
   if (cat === 'plantacoes') {
@@ -4148,21 +4209,28 @@ function cabecalhoGrupo(cat, g) {
     return `🪟 <b>${dadoLinha('estufa').nomeCurto || dadoLinha('estufa').nome}</b> · cabem ${fmt(cap)} pés de cada planta<div class="ocup">${['tomate', 'morango'].map(id =>
       `<span>${icone(ITEM[id].ico)} ${ITEM[id].plural}: <b>${fmt(qtd(id))} / ${fmt(cap)}</b>${qtd(id) >= cap ? ' (cheio)' : ''}</span>`).join('')}</div>`;
   }
-  if (cat === 'animais') {
-    if (g === 'abelhas') return '🐝 <b>Abelhas</b> · cada colmeia é a casa delas, então produzem até no inverno';
-    if (g === 'pets') return '🐾 <b>Bichinhos de estimação</b> · o gato mora na casa; o cachorro precisa da casinha';
-    const a = ABRIGOS[g], t = tierLinha(a.linha);
-    return `${ITEM[g].ico} <b>${a.plural[0].toUpperCase() + a.plural.slice(1)}</b> · ${t ? `🏠 ${dadoLinha(a.linha).nomeCurto || dadoLinha(a.linha).nome}: ${fmt(Math.min(qtd(g), capAbrigo(g)))} de ${fmt(qtd(g))} abrigados (cabem ${fmt(capAbrigo(g))})` : `🏠 primeiro construa ${a.art} ${a.nome}`}`;
+  if (cat === 'construcoes') {
+    if (g === 'outras') return '🏗️ <b>Construções</b>';
+    const oc = ESPECIES.filter(e => LINHA_ABRIGO(e) && tierLinha(LINHA_ABRIGO(e))).map(e => `<span>${ITEM[e].ico} ${fmt(qtd(e))} / ${fmt(capAbrigo(e))}</span>`);
+    return `🏠 <b>Abrigos dos animais</b> · cada abrigo define quantos animais cabem${oc.length ? `<div class="ocup">${oc.join('')}</div>` : ''}`;
   }
   return '';
 }
 function gruposDaLoja(itens) {
   if (abaLoja === 'limpeza') return ORDEM_AREAS.map(a => [a, itens.filter(i => i.area === a)]);
   if (abaLoja === 'plantacoes') return GRUPOS_PLANTA.map(([g]) => [g, itens.filter(i => i.grupo === g)]);
-  if (abaLoja === 'animais') return ESPECIES.map(e => [e, itens.filter(i => i.especie === e)]);
+  if (abaLoja === 'construcoes') return [['abrigos', itens.filter(i => i.grupo === 'abrigos')], ['outras', itens.filter(i => i.grupo !== 'abrigos')]];
   return [[null, itens]];
 }
 function montarLoja() {
+  const topo = el('div', 'qtd-loja', '<span>Quantidade:</span>');
+  for (const [k, nome] of QTDS_LOJA) {
+    const b = el('button', 'aba' + (k === qtdLoja ? ' ativa' : ''), nome);
+    b.dataset.qtd = k;
+    b.addEventListener('click', () => { qtdLoja = k; for (const x of topo.querySelectorAll('[data-qtd]')) x.classList.toggle('ativa', x.dataset.qtd === k); atualizarLoja(); });
+    topo.appendChild(b);
+  }
+  conteudo.appendChild(topo);
   const abas = el('div', 'abas');
   for (const [id, nome] of CATS_LOJA) {
     const b = el('button', 'aba' + (id === abaLoja ? ' ativa' : ''), nome);
@@ -4181,16 +4249,15 @@ function montarLoja() {
   const itens = ITENS.filter(i => i.cat === abaLoja);
   const st = new Map(itens.map(i => [i, visivelNaLoja(i)]));
   const ordem = { obra: 0, fila: 1, disponivel: 2, espera: 3, requisito: 4, nivel: 5, misterio: 6 };
+  const porEspecie = abaLoja === 'animais' || abaLoja === 'construcoes';
   let algum = false;
   for (const [g, its] of gruposDaLoja(itens)) {
-    const abrigoPrimeiro = (a, b) => (b.abrigo ? 1 : 0) - (a.abrigo ? 1 : 0);
-    const pend = its.filter(i => st.get(i) && st.get(i) !== 'feito').sort((a, b) => abaLoja === 'animais' ? abrigoPrimeiro(a, b) || ordem[st.get(a)] - ordem[st.get(b)] : ordem[st.get(a)] - ordem[st.get(b)]);
-    const mostrarCab = g && (pend.length || (abaLoja === 'plantacoes' && g === 'estufa' && tierLinha('estufa')) || (abaLoja === 'animais' && qtd(g) > 0));
+    const pend = its.filter(i => st.get(i) && st.get(i) !== 'feito').sort((a, b) => ordem[st.get(a)] - ordem[st.get(b)] || (porEspecie ? ordemEspecie(a) - ordemEspecie(b) : 0));
+    const mostrarCab = g && (pend.length || (abaLoja === 'plantacoes' && g === 'estufa' && tierLinha('estufa')));
     if (g && !mostrarCab) continue;
-    if (g) { // categorias sem grupos (construções, ferramentas, decoração) vão direto para a lista
+    if (g) { // categorias sem grupos (animais, ferramentas, decoração) vão direto para a lista
       const cab = el('div', 'grupo-loja', cabecalhoGrupo(abaLoja, g));
       cab.dataset.grupo = g;
-      if (abaLoja === 'animais' && ABRIGOS[g] && qtd(g) > capAbrigo(g)) cab.classList.add('frio');
       lista.appendChild(cab);
     }
     for (const i of pend) { lista.appendChild(cartaoItem(i, st.get(i))); algum = true; }
@@ -4219,6 +4286,17 @@ function textoMinerios(item) {
     return `<span class="${t < n ? 'falta' : ''}">${MINERIOS[m].ico} ${n} de ${MINERIOS[m].nome.toLowerCase()} (tem ${fmt(t)}${t < n ? `, faltam ${n - t}` : ''})</span>`;
   }).join(' · ') + (Object.entries(item.minerios).some(([m, n]) => (estado.minerios[m] || 0) < n) ? ' · <small>os minérios saem da ⛏️ mina</small>' : '');
 }
+function textoBotaoCompra(item) {
+  if (!item.repetivel) {
+    const obra = precisaObra(item), bloq = obra ? obraQueBloqueia(item) : null;
+    let t = `${obra ? (bloq ? '⏳ Pôr na fila' : '🔨 Começar obra') : 'Comprar'} · 🪙 ${fmt(item.custo)}${obra ? ` · ⏱️ ${fmtTempo(duracaoObra(item))}` : ''}`;
+    if (!temMinerios(item)) t += ' · faltam minérios';
+    return t;
+  }
+  if (limiteCapacidade(item) <= 0) return item.planta === 'estufa' ? `🪟 Estufa cheia (${qtd(item.id)} / ${capEstufa()})` : `🏠 Abrigo cheio (${qtd(item.id)} / ${capAbrigo(item.id)})`;
+  const { n, limite } = qtdDoBotao(item);
+  return `Comprar ${fmt(n)}${limite ? ' (limite)' : ''} · 🪙 ${fmt(custoLote(item, n))}`;
+}
 function atualizarLoja() {
   if (assinaturaLoja() !== estruturaPainel) { const s = conteudo.scrollTop; montarPainel(); conteudo.scrollTop = s; return; }
   const ob = conteudo.querySelector('[data-obra-box]');
@@ -4231,6 +4309,8 @@ function atualizarLoja() {
   for (const cab of conteudo.querySelectorAll('[data-grupo]')) { const h = cabecalhoGrupo(abaLoja, cab.dataset.grupo); if (cab.innerHTML !== h) cab.innerHTML = h; }
   for (const d of conteudo.querySelectorAll('.item[data-id]')) {
     const item = ITEM[d.dataset.id];
+    const fa = d.querySelector('[data-falta]');
+    if (fa && visivelNaLoja(item) === 'requisito') { const t = '🔒 ' + textoReq(item); if (fa.textContent !== t) fa.textContent = t; }
     const ef = d.querySelector('[data-efeito]');
     if (!ef) continue;
     const txtEf = [textoEfeito(item), infoExtra(item)].filter(Boolean).join('<br>');
@@ -4242,23 +4322,15 @@ function atualizarLoja() {
       const o = estado.obras.find(x => x.id === item.id);
       if (o) { const t = o.espera ? `⏳ Aguardando: ${ITEM[o.espera].nome}` : `🔨 Em obra… falta ${fmtTempo(faltaObra(o))}`; if (obraSelo.textContent !== t) obraSelo.textContent = t; }
     }
-    const m = maxAcessivel(item), bloq = precisaObra(item) ? obraQueBloqueia(item) : null;
-    for (const b of d.querySelectorAll('.comprar')) {
-      const k = b.dataset.k;
-      let txt, mostrar = true, ok = true;
-      if (!item.repetivel) {
-        ok = m >= 1;
-        const obra = precisaObra(item);
-        txt = `${obra ? (bloq ? '⏳ Pôr na fila' : '🔨 Começar obra') : 'Comprar'} · 🪙 ${fmt(item.custo)}${obra ? ` · ⏱️ ${fmtTempo(duracaoObra(item))}` : ''}`;
-        if (!temMinerios(item)) txt += ' · faltam minérios';
-      } else if (k === '1') { txt = `1x · 🪙 ${fmt(custoDe(item))}`; ok = m >= 1; if (limiteCapacidade(item) <= 0) txt = `🪟 ${item.plural}: ${qtd(item.id)} / ${capEstufa()} · melhore a estufa`; }
-      else if (k === '5') { mostrar = m >= 5; txt = `5x · 🪙 ${fmt(custoLote(item, 5))}`; }
-      else if (k === '10') { mostrar = m >= 10; txt = `10x · 🪙 ${fmt(custoLote(item, 10))}`; }
-      else { mostrar = m >= 2 && m !== 5 && m !== 10; txt = `Máx (${fmt(m)}) · 🪙 ${fmt(mostrar ? custoLote(item, m) : 0)}`; }
-      if (b.hidden !== !mostrar) b.hidden = !mostrar;
-      if (b.textContent !== txt) b.textContent = txt;
+    const b = d.querySelector('[data-comprar]');
+    if (b) {
+      const t = textoBotaoCompra(item), ok = qtdDoBotao(item).pode;
+      if (b.textContent !== t) b.textContent = t;
       if (b.disabled !== !ok) b.disabled = !ok;
     }
+    const ba = d.querySelector('.compras .ir-abrigo');
+    if (ba) { const mostrar = precisaIrAoAbrigo(item); if (ba.hidden !== !mostrar) ba.hidden = !mostrar; }
+    const bloq = precisaObra(item) ? obraQueBloqueia(item) : null;
     let esp = d.querySelector('.espera');
     if (bloq && !esp) { esp = el('div', 'espera'); d.querySelector('.info').appendChild(esp); }
     if (esp) { const t = bloq ? `⏳ Aguardando: ${bloq.nome} (pode pôr na fila: começa sozinha quando a outra terminar)` : ''; if (esp.textContent !== t) esp.textContent = t; }
@@ -4277,9 +4349,16 @@ function mineriosReservados() {
   }
   return r;
 }
+const sobraMinerio = m => Math.max(0, (estado.minerios[m] || 0) - (mineriosReservados()[m] || 0));
+// "vale 4 s da sua produção (🪙 4.003)": o preço acompanha o crescimento da fazenda
+function textoValor(v, base) { // base: { seg, minimo } do minério ou da raridade
+  if (rendaPotencial * base.seg <= base.minimo) return `vale 🪙 ${fmt(v)} (preço mínimo)`;
+  const s = v / rendaPotencial, t = s < 10 ? String(Math.round(s * 10) / 10).replace('.', ',') : String(Math.round(s));
+  return `vale ${t} s da sua produção (🪙 ${fmt(v)})`;
+}
 const peixesNoInventario = () => PEIXES.filter(p => (estado.peixes[p.id] || 0) > 0);
 function assinaturaInventario() {
-  return 'inv|' + Object.keys(MINERIOS).filter(m => estado.minerios[m] > 0).join(',') + '|' + peixesNoInventario().map(p => p.id).join(',') + '|' + especiesPescadas() + '|' + varaTier() + '|' + noite() + estacao();
+  return 'inv|' + Object.keys(MINERIOS).filter(m => estado.minerios[m] > 0).join(',') + '|' + peixesNoInventario().map(p => p.id + ((estado.peixes[p.id] || 0) > 1 ? '+' : '')).join(',') + '|' + especiesPescadas() + '|' + varaTier() + '|' + noite() + estacao();
 }
 function condicaoPeixe(p) {
   const l = [];
@@ -4301,9 +4380,9 @@ function cartaoColecao(p) {
   return d;
 }
 function montarInventario() {
-  const res = mineriosReservados();
-  conteudo.appendChild(el('div', 'caixa-info', '<b>🎒 Inventário</b><br><small>Os produtos da fazenda são vendidos sozinhos. Aqui ficam os minérios da mina e os peixes que você pescou: os minérios melhoram as ferramentas, e o que sobrar dá para vender.</small>'));
+  conteudo.appendChild(el('div', 'caixa-info', '<b>🎒 Inventário</b><br><small>Os produtos da fazenda são vendidos sozinhos. Aqui ficam os minérios da mina e os peixes que você pescou.<br>💡 O preço dos peixes e minérios acompanha o crescimento da sua fazenda: cada um vale alguns segundos da sua produção.</small>'));
   conteudo.appendChild(el('div', 'subtitulo', '⛏️ Minérios'));
+  conteudo.appendChild(el('div', 'desc', '<small>🧰 <b>Reservado</b> é o que as próximas melhorias de ferramentas vão usar. A <b>sobra</b> pode ser vendida à vontade.</small>'));
   const lm = el('div', 'lista');
   const mins = Object.keys(MINERIOS).filter(m => (estado.minerios[m] || 0) > 0);
   if (!mins.length) lm.appendChild(el('div', 'vazio', tem('minaEntrada') ? 'Nenhum minério ainda. Entre na mina e quebre as pedras!' : 'A mina fica no paredão atrás da casa (libera no nível 2).'));
@@ -4311,9 +4390,12 @@ function montarInventario() {
     const d = el('div', 'prod');
     d.dataset.min = m;
     d.innerHTML = `<div class="pi">${MINERIOS[m].ico}</div><div class="pn">${MINERIOS[m].nome}</div>
-      <div class="pb"><button class="comprar" data-v1></button><button class="comprar" data-vs></button></div><div class="ps" data-info></div>`;
-    d.querySelector('[data-v1]').addEventListener('click', () => venderComAviso(() => venderMinerio(m, 1), MINERIOS[m].nome));
-    d.querySelector('[data-vs]').addEventListener('click', () => venderComAviso(() => venderMinerio(m, Math.max(0, (estado.minerios[m] || 0) - (res[m] || 0))), MINERIOS[m].nome));
+      <div class="pb"><button class="comprar" data-vs></button><button class="comprar" data-v1></button></div><div class="ps" data-info></div>`;
+    d.querySelector('[data-vs]').addEventListener('click', () => venderComAviso(() => venderMinerio(m, sobraMinerio(m)), MINERIOS[m].nome));
+    d.querySelector('[data-v1]').addEventListener('click', () => {
+      if (sobraMinerio(m) >= 1) { venderComAviso(() => venderMinerio(m, 1), MINERIOS[m].nome); return; }
+      abrirConfirmacao('🧰 Minério reservado', `Este minério está reservado para melhorar suas ferramentas. Vender mesmo assim?`, 'Vender 1 mesmo assim', () => venderComAviso(() => venderMinerio(m, 1), MINERIOS[m].nome));
+    });
     lm.appendChild(d);
   }
   conteudo.appendChild(lm);
@@ -4321,7 +4403,7 @@ function montarInventario() {
   const lp = el('div', 'lista');
   const ps = peixesNoInventario();
   if (!ps.length) lp.appendChild(el('div', 'vazio', varaTier() ? 'Nenhum peixe guardado. Vá pescar! 🎣' : 'Compre uma vara de pesca (aba 🧰 Ferramentas) para pescar no rio.'));
-  else {
+  else if (ps.length > 1 || (estado.peixes[ps[0].id] || 0) > 1) {
     const todos = el('button', 'btn mini verde', '');
     todos.dataset.todos = '1';
     todos.addEventListener('click', () => venderComAviso(() => PEIXES.reduce((s, p) => s + venderPeixe(p.id, estado.peixes[p.id] || 0), 0), 'todos os peixes'));
@@ -4354,29 +4436,32 @@ function montarInventario() {
 function venderComAviso(fn, nome) {
   Som.iniciar();
   const v = fn();
-  if (v > 0) { Som.compra(); avisar(`💰 Vendeu ${nome}: +🪙 ${fmt(v)}`, '', 1800); } else Som.erro();
+  if (v > 0) {
+    Som.compra(); avisar(`💰 Vendeu ${nome}: +🪙 ${fmt(v)}`, '', 1800);
+    if (!estado.contadores.dicaPreco) { estado.contadores.dicaPreco = 1; avisar('💡 O preço dos peixes e minérios acompanha o crescimento da sua fazenda.', '', 5000); }
+  } else Som.erro();
   atualizarTudo(true);
 }
 function atualizarInventario() {
   if (assinaturaInventario() !== estruturaPainel) { const s = conteudo.scrollTop; montarPainel(); conteudo.scrollTop = s; return; }
   const res = mineriosReservados();
-  const set = (e, t, dis) => { if (!e) return; if (e.innerHTML !== t) e.innerHTML = t; if (dis !== undefined) e.disabled = dis; };
+  const set = (e, t, dis, esconder) => { if (!e) return; if (e.innerHTML !== t) e.innerHTML = t; if (dis !== undefined) e.disabled = dis; if (esconder !== undefined && e.hidden !== esconder) e.hidden = esconder; };
   for (const d of conteudo.querySelectorAll('[data-min]')) {
-    const m = d.dataset.min, n = estado.minerios[m] || 0, v = valorMinerio(m), sobra = Math.max(0, n - (res[m] || 0));
-    set(d.querySelector('[data-info]'), `Tem <b>${fmt(n)}</b> · 🪙 ${fmt(v)} cada${res[m] ? ` · 🧰 ${res[m]} ${res[m] > 1 ? 'reservados' : 'reservado'} para as próximas ferramentas` : ''}`);
-    set(d.querySelector('[data-v1]'), `Vender 1 · 🪙 ${fmt(v)}`, n < 1);
-    set(d.querySelector('[data-vs]'), sobra ? `Vender a sobra (${fmt(sobra)}) · 🪙 ${fmt(sobra * v)}` : 'Nada sobrando', sobra < 1);
+    const m = d.dataset.min, n = estado.minerios[m] || 0, v = valorMinerio(m), sobra = sobraMinerio(m);
+    set(d.querySelector('[data-info]'), `Tem <b>${fmt(n)}</b> · ${textoValor(v, MINERIOS[m])} cada${res[m] ? ` · 🧰 ${Math.min(n, res[m])} de ${res[m]} reservados` : ''}`);
+    set(d.querySelector('[data-vs]'), sobra ? `Vender a sobra (${fmt(sobra)}) · 🪙 ${fmt(sobra * v)}` : 'Vender a sobra · nada sobrando', sobra < 1);
+    // "Vender 1" só aparece se for diferente da sobra; sem sobra, avisa antes de vender o reservado
+    set(d.querySelector('[data-v1]'), sobra >= 1 ? `Vender 1 · 🪙 ${fmt(v)}` : `Vender 1 reservado… · 🪙 ${fmt(v)}`, n < 1, sobra === 1);
   }
   for (const d of conteudo.querySelectorAll('[data-peixe]')) {
     const id = d.dataset.peixe, n = estado.peixes[id] || 0, v = valorPeixe(id);
-    set(d.querySelector('[data-info]'), `Tem <b>${fmt(n)}</b> · 🪙 ${fmt(v)} cada`);
+    set(d.querySelector('[data-info]'), `Tem <b>${fmt(n)}</b> · ${textoValor(v, RARIDADES[PEIXE[id].raridade])} cada`);
     set(d.querySelector('[data-v1]'), `Vender 1 · 🪙 ${fmt(v)}`, n < 1);
-    set(d.querySelector('[data-vt]'), `Vender ${fmt(n)} · 🪙 ${fmt(n * v)}`, n < 1);
+    set(d.querySelector('[data-vt]'), `Vender todos (${fmt(n)}) · 🪙 ${fmt(n * v)}`, n < 2, n < 2); // com 1 peixe, um botão só
   }
   const t = conteudo.querySelector('[data-todos]');
   if (t) set(t, `Vender todos os peixes · 🪙 ${fmt(PEIXES.reduce((s, p) => s + (estado.peixes[p.id] || 0) * valorPeixe(p.id), 0))}`);
 }
-
 // =====================================================================
 // HABILIDADES (árvore)
 // =====================================================================
@@ -4619,9 +4704,8 @@ function montarRotulos() {
   for (const g of GRUPOS_ROTULO) {
     const tipos = g.tipos.filter(tem);
     if (!tipos.length) continue;
-    const lotado = tipos.some(t => ABRIGOS[t] && qtd(t) > capAbrigo(t));
-    const r = add(tipos.map(t => `${ITEM[t].ico} ×${fmt(qtd(t))}${ABRIGOS[t] ? ` 🏠${fmt(capAbrigo(t))}` : ''}`).join(' · ') + (lotado ? ' ❄️' : ''), lotado && inverno() ? 'frio' : '', () => [g.x, g.y]);
-    r.title = tipos.map(t => ABRIGOS[t] ? textoAbrigo(t).replace(/<[^>]+>/g, '') : '').filter(Boolean).join('\n');
+    const r = add(tipos.map(t => `${ITEM[t].ico} ${fmt(qtd(t))}${LINHA_ABRIGO(t) ? `/${fmt(capAbrigo(t))}` : ''}`).join(' · ') + (inverno() && tipos.some(t => ABRIGOS[t]) ? ' 🏠' : ''), '', () => [g.x, g.y]);
+    r.title = tipos.map(t => textoOcupacao(t).replace(/<[^>]+>/g, '')).filter(Boolean).join('\n') + (inverno() ? '\nNo inverno, todos ficam dentro dos abrigos.' : '');
   }
   for (const a of ORDEM_AREAS) if (!areaLiberada(a)) { const [x, y] = AREAS[a].placa; add(`🔒 ${AREAS[a].nome} · nível ${AREAS[a].nivel}`, 'placa', () => [x, y - 18]); }
   if (tem('placa')) {
@@ -4714,7 +4798,7 @@ function faltaPara(id) {
   const it = ITEM[id];
   if (temOuObra(id) || maxAcessivel(it) > 0) return null;
   if (it.nivel > estado.nivel) return { tipo: 'nivel', txt: `Ele libera no nível ${it.nivel}: complete as metas lá em cima.` };
-  if (!reqOk(it)) return { tipo: 'req', id: it.req.find(([r, n]) => qtd(r) < n && !emObra(r))?.[0], txt: `Antes, precisa de: ${textoReq(it)}.` };
+  if (!reqOk(it)) return { tipo: 'req', id: it.req.find(([r, n]) => qtd(r) < n && !emObra(r))?.[0], txt: `${textoReq(it)}.` };
   if (!temMinerios(it)) {
     const f = Object.entries(it.minerios).filter(([m, n]) => (estado.minerios[m] || 0) < n).map(([m, n]) => `${MINERIOS[m].ico} ${n - (estado.minerios[m] || 0)} de ${MINERIOS[m].nome.toLowerCase()}`).join(' e ');
     return { tipo: 'minerio', txt: `Faltam minérios: ${f}. ${tem('minaEntrada') ? 'Pegue na ⛏️ mina.' : 'Eles saem da mina.'}` };
@@ -4817,16 +4901,11 @@ function posicionarBalao(alvo) {
 // EVENTOS DO JOGO → avisos, sons e redesenho
 // =====================================================================
 let invernoAvisadoAno = 0;
-// "15 galinhas e 3 patos" que não cabem nos abrigos
-function semAbrigoTexto() {
-  return especiesSemAbrigo().map(e => `${fmt(qtd(e) - capAbrigo(e))} ${ABRIGOS[e].plural}`).join(', ').replace(/, ([^,]*)$/, ' e $1');
-}
 ouvintes.push((tipo, d) => {
   if (carregando) return;
   if (tipo === 'obraIniciada') {
     Som.obra();
     avisar(`🔨 Obra começou: <b>${d.nome}</b> · ⏱️ ${fmtTempo(duracaoObra(d))} <small>(clique na fazenda para adiantar)</small>`);
-    destacar(d.id);
   } else if (tipo === 'obraFila') {
     Som.obra();
     const b = obraQueBloqueia(d);
@@ -4841,8 +4920,9 @@ ouvintes.push((tipo, d) => {
     if (d.id === 'entulho') CEN.entulho.forEach(p => poeira(p.x, p.y - 2, ['#b5543c', '#9a7048', '#8d8d8d'], 3));
     if (d.id === 'mata') for (let i = 0; i < 80; i++) poeira(sorteia(545, 795), sorteia(155, 355), ['#2c5228', '#4d8040', '#6b4a2f'], 2, 40);
     avisar(`✅ ${d.msg || d.nome + ' pronto!'}`, d.grande ? 'nivel' : '');
+    redesenharCaches(); sincronizarAnimais(); // o desenho entra no mapa antes da seta
     destacar(d.id, estado.obras.every(o => o.espera)); // não puxa a câmera se outra obra está andando
-    redesenharCaches(); sincronizarAnimais(); atualizarTudo(true);
+    atualizarTudo(true);
   } else if (tipo === 'nivel') {
     Som.nivel();
     avisar(`⭐ <b>Nível ${d}: ${NIVEIS[d].nome}!</b> +${PONTOS_POR_NIVEL} pontos de habilidade`, 'nivel', 4500);
@@ -4865,9 +4945,8 @@ ouvintes.push((tipo, d) => {
     Som.estacao();
     const e = ESTACOES[d];
     const dica = ['Cenouras, morangos e girassóis rendem mais.', 'Tomate, milho e café rendem mais.', 'Abóbora, trigo e frutas rendem mais.',
-      'Plantações de fora rendem só 25%. A estufa, a couve e o repolho salvam o frio! Os animais que cabem nos abrigos ficam lá dentro e continuam produzindo.'][d];
+      'Plantações de fora rendem só 25%. A estufa, a couve e o repolho salvam o frio! Os animais ficam dentro dos abrigos e continuam produzindo.'][d];
     avisar(`${e.ico} Chegou o <b>${e.nome}</b>! <small>${dica}</small>`, d === 3 ? 'alerta' : '', 5500);
-    if (d === 3 && especiesSemAbrigo().length) avisar(`❄️ Sem lugar no abrigo: <b>${semAbrigoTexto()}</b>. Eles ficam do lado de fora e produzem só metade.`, 'alerta', 6000);
     redesenharCaches(); sincronizarAnimais(); montarRotulos();
   }
 });
@@ -4875,8 +4954,7 @@ ouvintes.push((tipo, d) => {
 function avisosDeEstacao() {
   if (estacao() === 2 && fracEstacao() > 0.86 && invernoAvisadoAno !== anoAtual()) {
     invernoAvisadoAno = anoAtual();
-    const sem = especiesSemAbrigo().length ? ` <b>Vão ficar sem abrigo: ${semAbrigoTexto()}.</b> Melhore os abrigos na aba 🐾 Animais.` : ' Todos os animais cabem nos abrigos. 👍';
-    avisar(`❄️ <b>O inverno está chegando!</b> <small>Plantações de fora vão render só 25%.${sem}</small>`, 'alerta', 7000);
+    avisar('❄️ <b>O inverno está chegando!</b> <small>Plantações de fora vão render só 25%: aproveite a estufa, a couve e o repolho. Os animais vão para os abrigos.</small>', 'alerta', 7000);
   }
 }
 // dicas quando a faixa fica quieta por um tempo
@@ -5169,7 +5247,10 @@ $('btnPesca').addEventListener('click', () => abrirPesca());
 
 // ---------- Regras ----------
 const fatorMordida = () => Math.max(0.45, 1 - 0.1 * (varaTier() - 1)) * (hab('c2') ? 0.6 : 1);
-function tamanhoZona(p) { return Math.max(0.14, Math.min(0.42, (0.17 + 0.035 * varaTier()) * (hab('c2') ? 1.15 : 1) * (1 - 0.05 * (p.dif - 1)))); }
+// Faixa de captura: grande desde a vara de madeira e maior a cada vara; os peixes difíceis encolhem um pouco
+function tamanhoZona(p) { return Math.max(0.2, Math.min(0.56, (0.26 + 0.05 * varaTier()) * (hab('c2') ? 1.15 : 1) * (1 - 0.045 * (p.dif - 1)) * (p.raridade === 'lendario' ? 0.8 : 1))); }
+// Movimento do peixe por dificuldade (1 comum · 2 incomum · 3 raro · 5 lendário): velocidade, tempo entre mudanças e distância de cada mudança
+const NADO = { 1: [0.09, 2.4, 0.22], 2: [0.14, 1.9, 0.32], 3: [0.2, 1.5, 0.42], 4: [0.27, 1.2, 0.55], 5: [0.46, 0.75, 0.8] };
 function lancar() {
   pesca.fase = 'esperando'; pesca.t = 0;
   pesca.espera = sorteia(2.2, 5.5) * fatorMordida();
@@ -5186,7 +5267,7 @@ function comecarLuta() {
   const p = pesca.peixe;
   pesca.fase = 'lutando'; pesca.t = 0;
   pesca.zona = tamanhoZona(p); pesca.zy = 0.1; pesca.vel = 0;
-  pesca.fy = 0.3; pesca.alvo = Math.random(); pesca.troca = 0; pesca.prog = 0.3;
+  pesca.fy = 0.25; pesca.alvo = 0.3; pesca.troca = 1; pesca.prog = 0.35;
 }
 function fimLuta(pegou) {
   const p = pesca.peixe;
@@ -5209,19 +5290,23 @@ function atualizarPesca(dt) {
   else if (pesca.fase === 'lutando') {
     const p = pesca.peixe;
     // a faixa sobe enquanto o botão está apertado e cai quando solta
-    pesca.vel += (pesca.segurando ? 2.1 : -1.8) * dt;
-    pesca.vel = Math.max(-1.2, Math.min(1.2, pesca.vel));
+    pesca.vel += (pesca.segurando ? 1.7 : -1.4) * dt;
+    pesca.vel = Math.max(-0.9, Math.min(0.9, pesca.vel));
     pesca.zy += pesca.vel * dt;
     if (pesca.zy < 0) { pesca.zy = 0; pesca.vel = Math.abs(pesca.vel) * 0.3; }
     if (pesca.zy > 1 - pesca.zona) { pesca.zy = 1 - pesca.zona; pesca.vel = -Math.abs(pesca.vel) * 0.3; }
-    // o peixe escolhe um ponto e nada até lá (os difíceis trocam mais vezes e mais rápido)
+    // o peixe escolhe um ponto perto e nada até lá devagar (os difíceis trocam mais vezes, mais longe e mais rápido)
+    const [vel, intervalo, salto] = NADO[p.dif] || NADO[3];
     pesca.troca -= dt;
-    if (pesca.troca <= 0) { pesca.alvo = Math.random(); pesca.troca = Math.max(0.35, 1.5 - p.dif * 0.22) * sorteia(0.6, 1.3); }
-    const vf = 0.2 + p.dif * 0.13 + (p.raridade === 'lendario' ? Math.sin(pesca.t * 9) * 0.25 : 0);
+    if (pesca.troca <= 0) {
+      pesca.alvo = Math.max(0.05, Math.min(0.95, pesca.fy + sorteia(-salto, salto)));
+      pesca.troca = intervalo * sorteia(0.7, 1.3);
+    }
+    const vf = vel * (p.raridade === 'lendario' ? 1 + Math.sin(pesca.t * 7) * 0.35 : 1);
     const d = pesca.alvo - pesca.fy;
     pesca.fy += Math.sign(d) * Math.min(Math.abs(d), vf * dt);
     const dentro = pesca.fy >= pesca.zy && pesca.fy <= pesca.zy + pesca.zona;
-    pesca.prog += (dentro ? 0.3 : -(0.17 + p.dif * 0.03)) * dt;
+    pesca.prog += (dentro ? 0.34 : -(0.1 + p.dif * 0.035)) * dt;
     if (pesca.prog >= 1) fimLuta(true);
     else if (pesca.prog <= 0) fimLuta(false);
   }
@@ -5601,7 +5686,7 @@ if (location.search.includes('teste')) window.__fazenda = { get estado() { retur
   ITEM, ITENS, NIVEIS, CONQUISTAS, PEIXES, LOCAL, PLACA, CEU, tick, comprar, calcularFluxos, redesenharCaches, sincronizarAnimais, sincronizarPessoas, atualizarTudo, abrirPainel,
   contratar, camera, abrirMina, fecharMina, abrirPesca, fecharPesca, pesca, verificarNivel, montarRotulos, mina, verificarConquistas, visivelNaLoja, maxAcessivel, fontesDePontos,
   pontosPossiveis, pontosGanhos, telaParaMundo, mundoParaPct, limitarCamera, destacar, adiantarObras, registrarPeixe, sortearPeixe, desbloquearHabilidade, HABILIDADES, HAB,
-  bonusFuncao, multEquipe, metasDoProximo, mundo, desenharMundo, tutorial, config, salvar, addMinerio, especiesSemAbrigo, capAbrigo, emObra, obraQueBloqueia, andarMaximo, localLiberado, avaliar: codigo => eval(codigo) };
+  bonusFuncao, multEquipe, metasDoProximo, mundo, desenharMundo, tutorial, config, salvar, addMinerio, capAbrigo, itemAbrigo, limiteCapacidade, textoReq, LINHA_ABRIGO, posDestaque, aoComprar, clicarComprar, get qtdLoja() { return qtdLoja; }, set qtdLoja(v) { qtdLoja = v; }, emObra, obraQueBloqueia, andarMaximo, localLiberado, avaliar: codigo => eval(codigo) };
 })();
 </script>
 </body>
